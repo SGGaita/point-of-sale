@@ -3,17 +3,38 @@ import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal} 
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows} from '../theme/theme';
 
-const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrintReceipt}) => {
+const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrintReceipt, onUpdateCustomerName}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [addWaiterModal, setAddWaiterModal] = useState(false);
   const [newWaiterName, setNewWaiterName] = useState('');
   const [expandedWaiter, setExpandedWaiter] = useState(null);
+  const [customerNames, setCustomerNames] = useState({});
 
   const filters = [
     {id: 'all', label: 'All Waiters'},
     {id: 'unpaid', label: 'With Unpaid Orders'},
   ];
+
+  const handleCustomerNameChange = (orderId, value) => {
+    setCustomerNames(prev => ({
+      ...prev,
+      [orderId]: value
+    }));
+  };
+
+  const handleCustomerNameBlur = (orderId) => {
+    const newName = customerNames[orderId];
+    if (newName !== undefined && onUpdateCustomerName) {
+      onUpdateCustomerName(orderId, newName);
+    }
+  };
+
+  const getCustomerName = (order) => {
+    return customerNames[order.id] !== undefined 
+      ? customerNames[order.id] 
+      : order.customerName || '';
+  };
 
   const getWaiterStats = (waiterName) => {
     const waiterOrders = orders.filter(order => order.waiter === waiterName);
@@ -197,11 +218,19 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
                             <View style={styles.orderRowTop}>
                               <View style={styles.orderRowLeft}>
                                 <Text style={styles.orderNumber}>{order.orderNumber}</Text>
-                                {order.customerName && (
-                                  <Text style={styles.orderCustomer}>{order.customerName}</Text>
-                                )}
                               </View>
                               <Text style={styles.orderAmount}>{order.total} Ksh</Text>
+                            </View>
+                            <View style={styles.customerNameInputContainer}>
+                              <Icon name="person" size={16} color={colors.textSecondary} style={styles.customerIcon} />
+                              <TextInput
+                                style={styles.customerNameInput}
+                                placeholder="Enter customer name (optional)"
+                                placeholderTextColor={colors.placeholder}
+                                value={getCustomerName(order)}
+                                onChangeText={(value) => handleCustomerNameChange(order.id, value)}
+                                onBlur={() => handleCustomerNameBlur(order.id)}
+                              />
                             </View>
                             <View style={styles.orderActions}>
                               <TouchableOpacity
@@ -222,7 +251,7 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
                                 }}
                               >
                                 <Icon name="print" size={16} color={colors.white} />
-                                <Text style={styles.actionBtnText}>Receipt</Text>
+                                <Text style={styles.actionBtnText}>Print Receipt</Text>
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -276,8 +305,13 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.addButton]}
+                style={[
+                  styles.modalButton, 
+                  styles.addButton,
+                  !newWaiterName.trim() && styles.addButtonDisabled
+                ]}
                 onPress={handleAddWaiter}
+                disabled={!newWaiterName.trim()}
               >
                 <Text style={styles.addButtonText}>Add Waiter</Text>
               </TouchableOpacity>
@@ -505,6 +539,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textPrimary,
   },
+  customerNameInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.inputBackground,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  customerIcon: {
+    marginRight: 8,
+  },
+  customerNameInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    padding: 0,
+  },
   orderActions: {
     flexDirection: 'row',
     gap: 8,
@@ -626,6 +680,10 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#27AE60',
+  },
+  addButtonDisabled: {
+    backgroundColor: 'rgba(39, 174, 96, 0.4)',
+    opacity: 0.6,
   },
   addButtonText: {
     color: colors.white,

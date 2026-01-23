@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, StyleSheet} from 'react-native';
 import Header from '../components/Header';
 import MenuView from '../components/MenuView';
@@ -8,12 +8,15 @@ import ExpensesView from '../components/ExpensesView';
 import SummaryView from '../components/SummaryView';
 import Snackbar from '../components/Snackbar';
 import ReceiptModal from '../components/ReceiptModal';
+import {orderService} from '../services/orderService';
+import {waiterService} from '../services/waiterService';
+import {expenseService} from '../services/expenseService';
 
 const HomeScreen = () => {
   const [activeView, setActiveView] = useState('menu');
   const [orders, setOrders] = useState([]);
   const [orderCounter, setOrderCounter] = useState(1);
-  const [waiters, setWaiters] = useState(['Noorah', 'Valary', 'Jasmine', 'Pauline']);
+  const [waiters, setWaiters] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [lastResetDate, setLastResetDate] = useState(null);
   const [snackbar, setSnackbar] = useState({
@@ -25,6 +28,47 @@ const HomeScreen = () => {
     visible: false,
     order: null,
   });
+
+  // Load orders, waiters, and expenses from database on mount
+  useEffect(() => {
+    loadOrders();
+    loadWaiters();
+    loadExpenses();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      const dbOrders = await orderService.getAllOrders();
+      setOrders(dbOrders);
+      
+      // Calculate next order counter based on existing orders
+      if (dbOrders.length > 0) {
+        const lastOrderNumber = dbOrders[dbOrders.length - 1].orderNumber;
+        const lastCounter = parseInt(lastOrderNumber.split('-')[1]);
+        setOrderCounter(lastCounter + 1);
+      }
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  };
+
+  const loadWaiters = async () => {
+    try {
+      const dbWaiters = await waiterService.getAllWaiters();
+      setWaiters(dbWaiters);
+    } catch (error) {
+      console.error('Error loading waiters:', error);
+    }
+  };
+
+  const loadExpenses = async () => {
+    try {
+      const dbExpenses = await expenseService.getAllExpenses();
+      setExpenses(dbExpenses);
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+    }
+  };
 
   const handleMenuPress = () => {
     setActiveView('menu');
@@ -46,24 +90,40 @@ const HomeScreen = () => {
     setActiveView('summary');
   };
 
-  const handleCreateOrder = (orderData) => {
-    const orderNumber = `DBK-${String(orderCounter).padStart(4, '0')}`;
-    
-    const newOrder = {
-      ...orderData,
-      orderNumber: orderNumber,
-      id: Date.now(),
-      status: 'pending',
-    };
+  const handleCreateOrder = async (orderData) => {
+    try {
+      const orderNumber = `DBK-${String(orderCounter).padStart(4, '0')}`;
+      
+      const orderToCreate = {
+        orderNumber: orderNumber,
+        waiter: orderData.waiter,
+        customerName: orderData.customerName || '',
+        total: orderData.total,
+        status: 'pending',
+        timestamp: Date.now(),
+        items: orderData.items,
+      };
 
-    setOrders(prev => [newOrder, ...prev]);
-    setOrderCounter(prev => prev + 1);
+      // Save to database
+      const createdOrder = await orderService.createOrder(orderToCreate);
+      
+      // Update local state
+      setOrders(prev => [createdOrder, ...prev]);
+      setOrderCounter(prev => prev + 1);
 
-    // Show receipt modal
-    setReceiptModal({
-      visible: true,
-      order: newOrder,
-    });
+      // Show receipt modal
+      setReceiptModal({
+        visible: true,
+        order: createdOrder,
+      });
+    } catch (error) {
+      console.error('Error creating order:', error);
+      setSnackbar({
+        visible: true,
+        message: 'Failed to create order',
+        type: 'error',
+      });
+    }
   };
 
   const handleCloseReceipt = () => {
@@ -240,43 +300,144 @@ const HomeScreen = () => {
     }
   };
 
-  const handleMarkPaid = (orderId) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
-        order.id === orderId ? {...order, status: 'paid'} : order
-      )
-    );
-    setSnackbar({
-      visible: true,
-      message: 'Order marked as paid',
-      type: 'success',
-    });
-  };
-
-  const handleAddWaiter = (waiterName) => {
-    if (!waiters.includes(waiterName)) {
-      setWaiters(prev => [...prev, waiterName]);
+  const handleMarkPaid = async (orderId) => {
+    try {
+      // Update in database
+      await orderService.updateOrderStatus(orderId, 'paid');
+      
+      // Update local state
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId ? {...order, status: 'paid'} : order
+        )
+      );
+      
       setSnackbar({
         visible: true,
-        message: `${waiterName} added successfully`,
+        message: 'Order marked as paid',
         type: 'success',
       });
-    } else {
+    } catch (error) {
+      console.error('Error marking order as paid:', error);
       setSnackbar({
         visible: true,
-        message: 'Waiter already exists',
+        message: 'Failed to update order status',
         type: 'error',
       });
     }
   };
 
-  const handleAddExpense = (expenseData) => {
-    setExpenses(prev => [expenseData, ...prev]);
-    setSnackbar({
-      visible: true,
-      message: 'Expense added successfully',
-      type: 'success',
-    });
+  const handleAddWaiter = async (waiterName) => {
+    try {
+      // Save to database
+      await waiterService.createWaiter(waiterName);
+      
+      // Reload waiters from database
+      await loadWaiters();
+      
+      setSnackbar({
+        visible: true,
+        message: `${waiterName} added successfully`,
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error adding waiter:', error);
+      setSnackbar({
+        visible: true,
+        message: error.message || 'Failed to add waiter',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleUpdateCustomerName = async (orderId, customerName) => {
+    try {
+      // Update in database
+      await orderService.updateOrderCustomerName(orderId, customerName);
+      
+      // Update local state
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId ? {...order, customerName} : order
+        )
+      );
+    } catch (error) {
+      console.error('Error updating customer name:', error);
+      setSnackbar({
+        visible: true,
+        message: 'Failed to update customer name',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleAddExpense = async (expenseData) => {
+    try {
+      // Save to database
+      await expenseService.createExpense(expenseData);
+      
+      // Reload expenses from database
+      await loadExpenses();
+      
+      setSnackbar({
+        visible: true,
+        message: 'Expense added successfully',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      setSnackbar({
+        visible: true,
+        message: 'Failed to add expense',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleUpdateExpense = async (updatedExpense) => {
+    try {
+      // Update in database
+      await expenseService.updateExpense(updatedExpense);
+      
+      // Reload expenses from database
+      await loadExpenses();
+      
+      setSnackbar({
+        visible: true,
+        message: 'Expense updated successfully',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      setSnackbar({
+        visible: true,
+        message: 'Failed to update expense',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId) => {
+    try {
+      // Delete from database
+      await expenseService.deleteExpense(expenseId);
+      
+      // Reload expenses from database
+      await loadExpenses();
+      
+      setSnackbar({
+        visible: true,
+        message: 'Expense deleted successfully',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      setSnackbar({
+        visible: true,
+        message: 'Failed to delete expense',
+        type: 'error',
+      });
+    }
   };
 
   const handleResetOrders = () => {
@@ -316,9 +477,9 @@ const HomeScreen = () => {
       case 'orders':
         return <OrdersView orders={orders} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} />;
       case 'waiters':
-        return <WaitersView waiters={waiters} orders={orders} onAddWaiter={handleAddWaiter} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} />;
+        return <WaitersView waiters={waiters} orders={orders} onAddWaiter={handleAddWaiter} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} onUpdateCustomerName={handleUpdateCustomerName} />;
       case 'expenses':
-        return <ExpensesView expenses={expenses} onAddExpense={handleAddExpense} />;
+        return <ExpensesView expenses={expenses} onAddExpense={handleAddExpense} onUpdateExpense={handleUpdateExpense} onDeleteExpense={handleDeleteExpense} />;
       case 'summary':
         return <SummaryView orders={orders} expenses={expenses} onMarkPaid={handleMarkPaid} />;
       default:

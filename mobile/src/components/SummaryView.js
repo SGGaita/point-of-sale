@@ -4,12 +4,18 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows} from '../theme/theme';
 
 const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
+  const getCurrentDate = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  };
+
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-  const [tempStartDate, setTempStartDate] = useState(null);
-  const [tempEndDate, setTempEndDate] = useState(null);
+  const [startDate, setStartDate] = useState(getCurrentDate());
+  const [endDate, setEndDate] = useState(getCurrentDate());
+  const [tempStartDate, setTempStartDate] = useState(getCurrentDate());
+  const [tempEndDate, setTempEndDate] = useState(getCurrentDate());
 
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -98,6 +104,14 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
     if (tempStartDate && date.getTime() === tempStartDate.getTime()) return true;
     if (tempEndDate && date.getTime() === tempEndDate.getTime()) return true;
     return false;
+  };
+
+  const isFutureDate = (day) => {
+    const date = new Date(selectedYear, selectedMonth, day);
+    date.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date > today;
   };
   const getFilteredOrders = () => {
     if (!startDate || !endDate) return orders;
@@ -215,6 +229,7 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
               const day = index + 1;
               const inRange = isDateInRange(day);
               const selected = isDateSelected(day);
+              const isFuture = isFutureDate(day);
               return (
                 <TouchableOpacity 
                   key={day} 
@@ -222,12 +237,15 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
                     styles.dayCell,
                     inRange && styles.dayCellInRange,
                     selected && styles.dayCellSelected,
+                    isFuture && styles.dayCellDisabled,
                   ]}
-                  onPress={() => handleDayPress(day)}
+                  onPress={() => !isFuture && handleDayPress(day)}
+                  disabled={isFuture}
                 >
                   <Text style={[
                     styles.dayNumber,
                     (inRange || selected) && styles.dayNumberSelected,
+                    isFuture && styles.dayNumberDisabled,
                   ]}>
                     {day}
                   </Text>
@@ -249,9 +267,9 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
               </Text>
             </View>
             <TouchableOpacity 
-              style={[styles.filterButton, (!tempStartDate || !tempEndDate) && styles.filterButtonDisabled]}
+              style={[styles.filterButton, !tempStartDate && styles.filterButtonDisabled]}
               onPress={handleFilter}
-              disabled={!tempStartDate || !tempEndDate}
+              disabled={!tempStartDate}
             >
               <Text style={styles.filterButtonText}>Filter</Text>
             </TouchableOpacity>
@@ -417,6 +435,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 20,
   },
+  dayCellDisabled: {
+    backgroundColor: '#f5f5f5',
+    opacity: 0.5,
+  },
   dayNumber: {
     fontSize: 14,
     color: colors.textPrimary,
@@ -424,6 +446,10 @@ const styles = StyleSheet.create({
   dayNumberSelected: {
     color: colors.white,
     fontWeight: '600',
+  },
+  dayNumberDisabled: {
+    color: colors.textSecondary,
+    opacity: 0.4,
   },
   dateRangeRow: {
     flexDirection: 'row',

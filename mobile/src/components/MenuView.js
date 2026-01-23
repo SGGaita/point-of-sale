@@ -1,7 +1,11 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, TextInput, StyleSheet, ScrollView, TouchableOpacity, Text, Modal} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows, commonStyles} from '../theme/theme';
+import {menuService} from '../services/menuService';
+import {waiterService} from '../services/waiterService';
+import {database} from '../database';
+import {Q} from '@nozbe/watermelondb';
 
 const MenuView = ({onCreateOrder, onError}) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,32 +18,59 @@ const MenuView = ({onCreateOrder, onError}) => {
   const [customerName, setCustomerName] = useState('');
   const [showWaiterModal, setShowWaiterModal] = useState(false);
   const [waiterSearchQuery, setWaiterSearchQuery] = useState('');
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [snackbar, setSnackbar] = useState({visible: false, message: '', type: 'success'});
+  const [waiters, setWaiters] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editItemName, setEditItemName] = useState('');
+  const [editItemPrice, setEditItemPrice] = useState('');
 
   const filters = [
     {id: 'all', label: 'All Items'},
-    {id: 'breakfast', label: 'Breakfast'},
-    {id: 'meals', label: 'Meals'},
-    {id: 'custom', label: 'Custom'},
+    {id: 'Breakfast', label: 'Breakfast'},
+    {id: 'Meals', label: 'Meals'},
+    {id: 'Custom', label: 'Custom'},
   ];
 
-  const baseMenuItems = [
-    {id: 1, name: 'Mixed Tea', price: 30, category: 'breakfast'},
-    {id: 2, name: 'Andazi', price: 10, category: 'breakfast'},
-    {id: 3, name: 'Beef Samosa', price: 30, category: 'breakfast'},
-    {id: 4, name: 'Pilau (Small)', price: 100, category: 'meals'},
-    {id: 5, name: 'Pilau (Large)', price: 150, category: 'meals'},
-    {id: 6, name: 'Ugali Fry (Small)', price: 200, category: 'meals'},
-    {id: 7, name: 'Ugali Fry (Large)', price: 250, category: 'meals'},
-    {id: 8, name: 'Ugali Mix (Small)', price: 100, category: 'meals'},
-    {id: 9, name: 'Ugali Mix (Large)', price: 150, category: 'meals'},
-    {id: 10, name: 'Chapo Minji', price: 150, category: 'meals'},
-    {id: 11, name: 'Matoke', price: 150, category: 'meals'},
-  ];
+  // Load menu items and waiters from database
+  useEffect(() => {
+    loadMenuItems();
+    loadWaiters();
+  }, []);
 
-  const menuItems = [...baseMenuItems, ...customItems];
+  const loadMenuItems = async () => {
+    try {
+      const menuItemsCollection = database.collections.get('menu_items');
+      const items = await menuItemsCollection.query().fetch();
+      
+      const formattedItems = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        category: item.category,
+      }));
+      
+      setMenuItems(formattedItems);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading menu items:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadWaiters = async () => {
+    try {
+      const dbWaiters = await waiterService.getAllWaiters();
+      setWaiters(dbWaiters);
+    } catch (error) {
+      console.error('Error loading waiters:', error);
+    }
+  };
 
   const getFilteredItems = () => {
-    let items = menuItems;
+    let items = [...menuItems, ...customItems];
     
     // Filter by category
     if (activeFilter !== 'all') {
@@ -74,8 +105,6 @@ const MenuView = ({onCreateOrder, onError}) => {
     }));
   };
 
-  const waiters = ['Noorah', 'Valary', 'Jasmine', 'Pauline'];
-
   const getFilteredWaiters = () => {
     if (waiterSearchQuery.trim() === '') {
       return waiters;
@@ -91,17 +120,101 @@ const MenuView = ({onCreateOrder, onError}) => {
     setWaiterSearchQuery('');
   };
 
-  const handleAddCustomItem = () => {
+  const showSnackbar = (message, type = 'success') => {
+    setSnackbar({visible: true, message, type});
+    setTimeout(() => {
+      setSnackbar({visible: false, message: '', type: 'success'});
+    }, 3000);
+  };
+
+  const handleAddCustomItem = async () => {
     if (customItemName.trim() && customItemPrice.trim()) {
-      const newItem = {
-        id: `custom-${Date.now()}`,
-        name: customItemName,
-        price: parseInt(customItemPrice),
-        category: 'custom',
-      };
-      setCustomItems(prev => [...prev, newItem]);
-      setCustomItemName('');
-      setCustomItemPrice('');
+      try {
+        // Persist to database
+        await menuService.createMenuItem({
+          name: customItemName.trim(),
+          price: parseInt(customItemPrice),
+          category: 'Custom',
+          isAvailable: true,
+        });
+        
+        // Reload menu items from database
+        await loadMenuItems();
+        
+        // Clear form
+        setCustomItemName('');
+        setCustomItemPrice('');
+        
+        // Show success message
+        showSnackbar('Item added to menu successfully', 'success');
+      } catch (error) {
+        console.error('Error adding custom item:', error);
+        showSnackbar('Failed to add item to menu', 'error');
+      }
+    }
+  };
+
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setEditItemName(item.name);
+    setEditItemPrice(item.price.toString());
+    setShowEditModal(true);
+  };
+
+  const hasItemChanged = () => {
+    if (!editingItem) return false;
+    return (
+      editItemName.trim() !== editingItem.name ||
+      editItemPrice.trim() !== editingItem.price.toString()
+    );
+  };
+
+  const handleUpdateItem = async () => {
+    if (editItemName.trim() && editItemPrice.trim() && editingItem) {
+      try {
+        // Get the actual menu item from database
+        const menuItemsCollection = database.collections.get('menu_items');
+        const menuItem = await menuItemsCollection.find(editingItem.id);
+        
+        // Update in database
+        await menuService.updateMenuItem(menuItem, {
+          name: editItemName.trim(),
+          price: parseInt(editItemPrice),
+        });
+        
+        // Reload menu items
+        await loadMenuItems();
+        
+        // Close modal and clear state
+        setShowEditModal(false);
+        setEditingItem(null);
+        setEditItemName('');
+        setEditItemPrice('');
+        
+        showSnackbar('Item updated successfully', 'success');
+      } catch (error) {
+        console.error('Error updating item:', error);
+        showSnackbar('Failed to update item', 'error');
+      }
+    }
+  };
+
+  const handleDeleteItem = async (item) => {
+    try {
+      // Get the actual menu item from database
+      const menuItemsCollection = database.collections.get('menu_items');
+      const menuItem = await menuItemsCollection.find(item.id);
+      
+      // Delete from database
+      await menuService.deleteMenuItem(menuItem);
+      
+      // Reload menu items
+      await loadMenuItems();
+      
+      showSnackbar('Item deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      showSnackbar('Failed to delete item', 'error');
     }
   };
 
@@ -195,7 +308,17 @@ const MenuView = ({onCreateOrder, onError}) => {
 
       {/* Menu Items Grid */}
       <View style={styles.menuGrid}>
-        {filteredItems.map((item, index) => (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading menu...</Text>
+          </View>
+        ) : filteredItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Icon name="restaurant" size={64} color={colors.border} />
+            <Text style={styles.emptyText}>No items found</Text>
+          </View>
+        ) : (
+          filteredItems.map((item, index) => (
           <View 
             key={item.id} 
             style={[
@@ -204,7 +327,25 @@ const MenuView = ({onCreateOrder, onError}) => {
             ]}
           >
             <View style={styles.menuCardHeader}>
-              <Text style={styles.itemName}>{item.name}</Text>
+              <View style={styles.itemNameRow}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                {item.category === 'Custom' && activeFilter === 'Custom' && (
+                  <View style={styles.itemActions}>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => handleEditItem(item)}
+                    >
+                      <Icon name="edit" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteItem(item)}
+                    >
+                      <Icon name="delete" size={16} color={colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
               <Text style={styles.itemPrice}>{item.price} Ksh</Text>
             </View>
             <View style={styles.quantityControls}>
@@ -223,7 +364,8 @@ const MenuView = ({onCreateOrder, onError}) => {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+        ))
+        )}
       </View>
 
       {/* Custom Item Section */}
@@ -248,11 +390,15 @@ const MenuView = ({onCreateOrder, onError}) => {
         />
         
         <TouchableOpacity 
-          style={styles.addButton}
+          style={[
+            styles.addButton,
+            (!customItemName.trim() || !customItemPrice.trim()) && styles.addButtonDisabled
+          ]}
           onPress={handleAddCustomItem}
+          disabled={!customItemName.trim() || !customItemPrice.trim()}
         >
           <Icon name="add-circle" size={20} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Add to Order</Text>
+          <Text style={styles.addButtonText}>Add to Menu</Text>
         </TouchableOpacity>
       </View>
 
@@ -319,8 +465,12 @@ const MenuView = ({onCreateOrder, onError}) => {
 
         {/* Create Order Button */}
         <TouchableOpacity 
-          style={styles.createOrderButton}
+          style={[
+            styles.createOrderButton,
+            !selectedWaiter && styles.createOrderButtonDisabled
+          ]}
           onPress={handleCreateOrder}
+          disabled={!selectedWaiter}
         >
           <Icon name="receipt-long" size={20} color="#FFFFFF" />
           <Text style={styles.createOrderButtonText}>Create Order</Text>
@@ -378,6 +528,92 @@ const MenuView = ({onCreateOrder, onError}) => {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Item Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Menu Item</Text>
+              <TouchableOpacity onPress={() => {
+                setShowEditModal(false);
+                setEditingItem(null);
+                setEditItemName('');
+                setEditItemPrice('');
+              }}>
+                <Icon name="close" size={24} color="#fb3441" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.inputLabel}>Item Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Enter item name"
+                placeholderTextColor="#95A5A6"
+                value={editItemName}
+                onChangeText={setEditItemName}
+                autoFocus={true}
+              />
+
+              <Text style={[styles.inputLabel, {marginTop: 16}]}>Price (Ksh)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Enter price"
+                placeholderTextColor="#95A5A6"
+                value={editItemPrice}
+                onChangeText={setEditItemPrice}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowEditModal(false);
+                  setEditingItem(null);
+                  setEditItemName('');
+                  setEditItemPrice('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.updateButton,
+                  (!editItemName.trim() || !editItemPrice.trim() || !hasItemChanged()) && styles.updateButtonDisabled
+                ]}
+                onPress={handleUpdateItem}
+                disabled={!editItemName.trim() || !editItemPrice.trim() || !hasItemChanged()}
+              >
+                <Text style={styles.updateButtonText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Snackbar */}
+      {snackbar.visible && (
+        <View style={[
+          styles.snackbar,
+          snackbar.type === 'error' && styles.snackbarError
+        ]}>
+          <Icon 
+            name={snackbar.type === 'success' ? 'check-circle' : 'error'} 
+            size={20} 
+            color="#FFFFFF" 
+          />
+          <Text style={styles.snackbarText}>{snackbar.message}</Text>
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -472,11 +708,27 @@ const styles = StyleSheet.create({
   menuCardHeader: {
     marginBottom: 12,
   },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   itemName: {
     fontSize: 19,
     fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 4,
+    flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    padding: 4,
+  },
+  deleteButton: {
+    padding: 4,
   },
   itemPrice: {
     fontSize: 18,
@@ -549,6 +801,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     marginLeft: 8,
+  },
+  addButtonDisabled: {
+    backgroundColor: 'rgba(251, 52, 65, 0.4)',
+    opacity: 0.6,
+  },
+  updateButton: {
+    backgroundColor: colors.primary,
+  },
+  updateButtonDisabled: {
+    backgroundColor: 'rgba(251, 52, 65, 0.4)',
+    opacity: 0.6,
+  },
+  updateButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  modalInput: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.inputBackground,
+  },
+  cancelButtonText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '600',
   },
   selectedItemsSection: {
     backgroundColor: '#FFFFFF',
@@ -766,11 +1075,63 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 8,
   },
+  createOrderButtonDisabled: {
+    backgroundColor: 'rgba(251, 52, 65, 0.4)',
+    opacity: 0.6,
+  },
   createOrderButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 16,
+  },
+  snackbar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.success,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    gap: 12,
+  },
+  snackbarError: {
+    backgroundColor: colors.danger,
+  },
+  snackbarText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    flex: 1,
   },
 });
 
