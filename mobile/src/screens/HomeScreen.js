@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {View, StyleSheet} from 'react-native';
+import RNPrint from 'react-native-print';
 import Header from '../components/Header';
 import MenuView from '../components/MenuView';
 import OrdersView from '../components/OrdersView';
@@ -144,8 +145,6 @@ const HomeScreen = () => {
 
   const handlePrintReceipt = async (order) => {
     try {
-      const RNPrint = require('react-native-print');
-      
       const formatDate = (timestamp) => {
         const date = new Date(timestamp);
         return date.toLocaleDateString('en-GB');
@@ -169,10 +168,24 @@ const HomeScreen = () => {
         <head>
           <meta charset="utf-8">
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
             body {
               font-family: Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: flex-start;
+              min-height: 100vh;
+              padding: 40px 0;
+            }
+            .receipt-container {
+              width: 33.33%;
+              max-width: 300px;
+              min-width: 250px;
               padding: 20px;
-              max-width: 600px;
               margin: 0 auto;
             }
             .header {
@@ -237,45 +250,52 @@ const HomeScreen = () => {
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="restaurant-name">DOSBROS KITCHEN</div>
-            <div class="restaurant-info">Hotel Restaurant</div>
-            <div class="restaurant-info">Nairobi, Kenya</div>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="order-details">
-            <div class="detail-row">
-              <span>Order #: ${order.orderNumber}</span>
-              <span>Date: ${formatDate(order.timestamp)}</span>
+          <div class="receipt-container">
+            <div class="header">
+              <div class="restaurant-name">DOSBROS KITCHEN</div>
+              <div class="restaurant-info">Hotel Restaurant</div>
+              <div class="restaurant-info">Nairobi, Kenya</div>
             </div>
-            <div class="detail-row">
-              <span>Waiter: ${order.waiter}</span>
-              <span>Time: ${formatTime(order.timestamp)}</span>
+            
+            <div class="divider"></div>
+            
+            <div class="order-details">
+              <div class="detail-row">
+                <span>Order #: ${order.orderNumber}</span>
+                <span>Date: ${formatDate(order.timestamp)}</span>
+              </div>
+              <div class="detail-row">
+                <span>Waiter: ${order.waiter}</span>
+                <span>Time: ${formatTime(order.timestamp)}</span>
+              </div>
+              ${order.customerName ? `
+              <div class="detail-row">
+                <span>Customer: ${order.customerName}</span>
+              </div>
+              ` : ''}
             </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>ITEM</th>
+                  <th>AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHTML}
+              </tbody>
+            </table>
+            
+            <div class="total">
+              <span>TOTAL:</span>
+              <span>${order.total} Ksh</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="thank-you">Thank you for dining with us!</div>
           </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>ITEM</th>
-                <th>AMOUNT</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHTML}
-            </tbody>
-          </table>
-          
-          <div class="total">
-            <span>TOTAL:</span>
-            <span>${order.total} Ksh</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="thank-you">Thank you for dining with us!</div>
         </body>
         </html>
       `;
