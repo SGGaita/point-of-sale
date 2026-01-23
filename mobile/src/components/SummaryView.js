@@ -179,6 +179,30 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
     return filteredOrders.filter(order => order.status === 'unpaid' || order.status === 'pending');
   };
 
+  const getSalesPerItem = () => {
+    const filteredOrders = getFilteredOrders();
+    const itemStats = {};
+    
+    filteredOrders.forEach(order => {
+      if (order.status === 'paid') {
+        order.items.forEach(item => {
+          if (!itemStats[item.name]) {
+            itemStats[item.name] = {
+              name: item.name,
+              totalQuantity: 0,
+              totalRevenue: 0,
+            };
+          }
+          itemStats[item.name].totalQuantity += item.quantity;
+          itemStats[item.name].totalRevenue += item.totalPrice;
+        });
+      }
+    });
+
+    return Object.values(itemStats)
+      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+  };
+
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-GB');
@@ -195,6 +219,7 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
   const totalProfit = getTotalProfit();
   const topSalesPerWaiter = getTopSalesPerWaiter();
   const unpaidOrders = getUnpaidOrders();
+  const salesPerItem = getSalesPerItem();
 
   const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
   const firstDay = getFirstDayOfMonth(selectedMonth, selectedYear);
@@ -329,6 +354,27 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
                   <Text style={styles.waiterSalesValue}>{waiter.totalOrders}</Text>
                   <Text style={styles.waiterSalesLabel}>Revenue</Text>
                   <Text style={styles.waiterSalesRevenue}>{waiter.totalRevenue} Ksh</Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Sales Per Item */}
+        <View style={styles.salesPerItemCard}>
+          <Text style={styles.salesPerItemTitle}>Sales Per Item</Text>
+          
+          {salesPerItem.length === 0 ? (
+            <Text style={styles.emptyText}>No sales data available</Text>
+          ) : (
+            salesPerItem.map((item, index) => (
+              <View key={index} style={styles.itemSalesRow}>
+                <View style={styles.itemSalesLeft}>
+                  <Text style={styles.itemSalesName}>{item.name}</Text>
+                  <Text style={styles.itemSalesQuantity}>Quantity: {item.totalQuantity}</Text>
+                </View>
+                <View style={styles.itemSalesRight}>
+                  <Text style={styles.itemSalesRevenue}>{item.totalRevenue} Ksh</Text>
                 </View>
               </View>
             ))
@@ -598,6 +644,52 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   waiterSalesRevenue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  salesPerItemCard: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  salesPerItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  itemSalesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  itemSalesLeft: {
+    flex: 1,
+  },
+  itemSalesName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  itemSalesQuantity: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  itemSalesRight: {
+    alignItems: 'flex-end',
+  },
+  itemSalesRevenue: {
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.primary,
