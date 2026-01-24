@@ -102,3 +102,45 @@ model SaleItem {
   
   @@map("sale_items")
 }
+
+enum OrderStatus {
+  PENDING
+  PAID
+  UNPAID
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  waiter       String
+  customerName String?
+  total        Decimal     @db.Decimal(10, 2)
+  status       OrderStatus @default(PENDING)
+  timestamp    DateTime
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  syncedAt     DateTime?
+
+  orderItems   OrderItem[]
+  
+  @@map("orders")
+  @@index([orderNumber])
+  @@index([status])
+  @@index([timestamp])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  itemName   String
+  price      Decimal  @db.Decimal(10, 2)
+  quantity   Int
+  totalPrice Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@map("order_items")
+  @@index([orderId])
+}

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'menu_items',
@@ -23,6 +23,8 @@ export default appSchema({
         { name: 'total', type: 'number' },
         { name: 'status', type: 'string' }, // 'pending', 'paid', 'unpaid'
         { name: 'timestamp', type: 'number' },
+        { name: 'is_synced', type: 'boolean' },
+        { name: 'synced_at', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

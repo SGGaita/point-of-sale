@@ -79,6 +79,8 @@ export const orderService = {
         order.total = orderData.total;
         order.status = orderData.status || 'pending';
         order.timestamp = orderData.timestamp || Date.now();
+        order.isSynced = false;
+        order.syncedAt = null;
       });
       
       // Create order items

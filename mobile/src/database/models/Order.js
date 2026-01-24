@@ -13,6 +13,8 @@ export default class Order extends Model {
   @field('total') total;
   @field('status') status;
   @field('timestamp') timestamp;
+  @field('is_synced') isSynced;
+  @field('synced_at') syncedAt;
   @readonly @date('created_at') createdAt;
   @readonly @date('updated_at') updatedAt;
 

@@ -5,133 +5,149 @@ import { useRouter } from "next/navigation";
 import {
   Box,
   Typography,
-  Button,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Alert,
-  Chip,
-  IconButton,
-  Snackbar,
-  CircularProgress,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
-  Tab,
+  Chip,
+  Button,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Alert,
+  Pagination,
+  Grid,
   Card,
   CardContent,
-  Grid,
-  Divider,
 } from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import PaymentIcon from "@mui/icons-material/Payment";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
-import RestaurantIcon from "@mui/icons-material/Restaurant";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import Sidebar from "@/components/dashboard/Sidebar";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import FilterListIcon from "@mui/icons-material/FilterList";
 
 const drawerWidth = 260;
 
-const orderStatusColors = {
-  PENDING: { color: "warning", label: "Pending" },
-  PREPARING: { color: "info", label: "Preparing" },
-  READY: { color: "success", label: "Ready" },
-  COMPLETED: { color: "default", label: "Completed" },
-  CANCELLED: { color: "error", label: "Cancelled" },
-};
-
-const paymentStatusColors = {
-  UNPAID: { color: "error", label: "Unpaid" },
-  PARTIAL: { color: "warning", label: "Partial" },
-  PAID: { color: "success", label: "Paid" },
-  REFUNDED: { color: "default", label: "Refunded" },
-};
-
-const orderTypeIcons = {
-  DINE_IN: <RestaurantIcon />,
-  TAKEAWAY: <ShoppingBagIcon />,
-  DELIVERY: <LocalShippingIcon />,
-};
-
-const paymentMethods = [
-  { value: "CASH", label: "Cash" },
-  { value: "MPESA", label: "M-Pesa" },
-  { value: "CARD", label: "Card" },
-  { value: "BANK_TRANSFER", label: "Bank Transfer" },
-];
-
 export default function OrdersPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 50,
+    total: 0,
+    totalPages: 0,
+  });
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [waiterFilter, setWaiterFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // Dialog
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  
-  const [openViewDialog, setOpenViewDialog] = useState(false);
-  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
-  const [openStatusDialog, setOpenStatusDialog] = useState(false);
-  
-  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
-  
-  const [paymentFormData, setPaymentFormData] = useState({
-    paymentMethod: "CASH",
-    amount: "",
-    referenceNumber: "",
-    notes: "",
-  });
-  
-  const [statusFormData, setStatusFormData] = useState({
-    orderStatus: "",
-  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    
     const userData = localStorage.getItem("pos_user");
     if (!userData) {
       router.push("/login");
       return;
     }
     setUser(JSON.parse(userData));
-    fetchOrders();
-  }, [router, mounted]);
+  }, [router]);
 
-  const fetchOrders = async (status = null) => {
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user, pagination.page, statusFilter, startDate, endDate]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      let url = "/api/orders";
-      if (status) {
-        url += `?status=${status}`;
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        pageSize: pagination.pageSize.toString(),
+      });
+
+      if (statusFilter && statusFilter !== "ALL") {
+        params.append("status", statusFilter);
       }
+      if (waiterFilter) {
+        params.append("waiter", waiterFilter);
+      }
+      if (startDate) {
+        params.append("startDate", startDate);
+      }
+      if (endDate) {
+        params.append("endDate", endDate);
+      }
+
+      const response = await fetch(`/api/orders/admin?${params.toString()}`);
       
-      const response = await fetch(url);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || "Failed to fetch orders");
+      }
+
       const data = await response.json();
-      
-      if (response.ok) {
-        setOrders(data.orders || []);
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
+      setOrders(data.orders || []);
+      setPagination(data.pagination || pagination);
+      setSummary(data.summary || null);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStatusUpdate = async (orderNumber, newStatus) => {
+    setUpdatingStatus(true);
+    try {
+      const response = await fetch("/api/orders/admin", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderNumber, status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update order status");
+      }
+
+      await fetchOrders();
+      setDialogOpen(false);
+      setSelectedOrder(null);
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setDialogOpen(true);
   };
 
   const handleLogout = () => {
@@ -139,159 +155,39 @@ export default function OrdersPage() {
     router.push("/login");
   };
 
-  const showSnackbar = (message, severity = "success") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-    const statusMap = ["", "PENDING", "PREPARING", "READY", "COMPLETED"];
-    fetchOrders(statusMap[newValue] || null);
-  };
-
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
-    setOpenViewDialog(true);
-  };
-
-  const handleOpenPaymentDialog = (order) => {
-    setSelectedOrder(order);
-    const remaining = parseFloat(order.total_amount) - parseFloat(order.amount_paid || 0);
-    setPaymentFormData({
-      paymentMethod: "CASH",
-      amount: remaining.toFixed(2),
-      referenceNumber: "",
-      notes: "",
-    });
-    setOpenPaymentDialog(true);
-  };
-
-  const handleOpenStatusDialog = (order) => {
-    setSelectedOrder(order);
-    setStatusFormData({
-      orderStatus: order.order_status,
-    });
-    setOpenStatusDialog(true);
-  };
-
-  const handleRecordPayment = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}/payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...paymentFormData,
-          createdBy: user?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        showSnackbar("Payment recorded successfully!");
-        fetchOrders();
-        setOpenPaymentDialog(false);
-      } else {
-        showSnackbar(data.error || "Failed to record payment", "error");
-      }
-    } catch (error) {
-      showSnackbar("An error occurred. Please try again.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleUpdateStatus = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderStatus: statusFormData.orderStatus,
-          updatedBy: user?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        showSnackbar("Order status updated successfully!");
-        fetchOrders();
-        setOpenStatusDialog(false);
-      } else {
-        showSnackbar(data.error || "Failed to update status", "error");
-      }
-    } catch (error) {
-      showSnackbar("An error occurred. Please try again.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCompleteOrder = async (orderId) => {
-    if (!confirm("Mark this order as completed? This will reduce inventory stock.")) return;
-    
-    setSubmitting(true);
-    try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderStatus: "COMPLETED",
-          updatedBy: user?.id,
-        }),
-      });
-
-      if (response.ok) {
-        showSnackbar("Order completed successfully!");
-        fetchOrders();
-      } else {
-        showSnackbar("Failed to complete order", "error");
-      }
-    } catch (error) {
-      showSnackbar("An error occurred. Please try again.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCancelOrder = async (orderId) => {
-    if (!confirm("Are you sure you want to cancel this order?")) return;
-    
-    setSubmitting(true);
-    try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        showSnackbar("Order cancelled successfully!");
-        fetchOrders();
-      } else {
-        showSnackbar("Failed to cancel order", "error");
-      }
-    } catch (error) {
-      showSnackbar("An error occurred. Please try again.", "error");
-    } finally {
-      setSubmitting(false);
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "PAID":
+        return "success";
+      case "UNPAID":
+        return "error";
+      case "PENDING":
+        return "warning";
+      default:
+        return "default";
     }
   };
 
   const formatCurrency = (amount) => {
-    return `KSh ${parseFloat(amount || 0).toFixed(2)}`;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
   };
 
-  if (!mounted || !user) return null;
+  const formatDate = (timestamp) => {
+    return new Date(timestamp).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
@@ -307,353 +203,367 @@ export default function OrdersPage() {
         }}
       >
         <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1600px", width: "100%" }}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
-              Orders Management
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              View and manage customer orders
-            </Typography>
-          </Box>
-
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={activeTab} onChange={handleTabChange}>
-              <Tab label="All Orders" />
-              <Tab label="Pending" />
-              <Tab label="Preparing" />
-              <Tab label="Ready" />
-              <Tab label="Completed" />
-            </Tabs>
-          </Box>
-
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
+          {/* Header */}
+          <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box>
+              <Typography variant="h4" component="h1" gutterBottom fontWeight={700}>
+                Orders
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                View and manage all orders from mobile devices
+              </Typography>
             </Box>
-          ) : (
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+            <IconButton onClick={fetchOrders} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
+          </Box>
+
+          {/* Summary Cards */}
+          {summary && (
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card elevation={0} sx={{ border: 1, borderColor: "divider" }}>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Total Orders
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700}>
+                      {summary.total}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card elevation={0} sx={{ border: 1, borderColor: "divider", bgcolor: "#e8f5e9" }}>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Paid Orders
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} color="success.main">
+                      {summary.paid}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Revenue: {formatCurrency(summary.totalRevenue)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card elevation={0} sx={{ border: 1, borderColor: "divider", bgcolor: "#ffebee" }}>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Unpaid Orders
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} color="error.main">
+                      {summary.unpaid}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Amount: {formatCurrency(summary.unpaidAmount)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card elevation={0} sx={{ border: 1, borderColor: "divider", bgcolor: "#fff3e0" }}>
+                  <CardContent>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Pending Orders
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} color="warning.main">
+                      {summary.pending}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          )}
+
+          {/* Filters */}
+          <Paper elevation={0} sx={{ p: 3, mb: 3, border: 1, borderColor: "divider" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <FilterListIcon />
+              <Typography variant="h6" fontWeight={600}>
+                Filters
+              </Typography>
+            </Box>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    label="Status"
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setPagination({ ...pagination, page: 1 });
+                    }}
+                  >
+                    <MenuItem value="ALL">All Status</MenuItem>
+                    <MenuItem value="PAID">Paid</MenuItem>
+                    <MenuItem value="UNPAID">Unpaid</MenuItem>
+                    <MenuItem value="PENDING">Pending</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Waiter Name"
+                  value={waiterFilter}
+                  onChange={(e) => setWaiterFilter(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      setPagination({ ...pagination, page: 1 });
+                      fetchOrders();
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Start Date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="End Date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+            <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+              <Button variant="contained" onClick={() => {
+                setPagination({ ...pagination, page: 1 });
+                fetchOrders();
+              }}>
+                Apply Filters
+              </Button>
+              <Button variant="outlined" onClick={() => {
+                setStatusFilter("ALL");
+                setWaiterFilter("");
+                setStartDate("");
+                setEndDate("");
+                setPagination({ ...pagination, page: 1 });
+              }}>
+                Clear
+              </Button>
+            </Box>
+          </Paper>
+
+          {/* Error Alert */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Orders Table */}
+          <Paper elevation={0} sx={{ border: 1, borderColor: "divider" }}>
+            <TableContainer>
               <Table>
-                <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+                <TableHead>
                   <TableRow>
                     <TableCell><strong>Order #</strong></TableCell>
-                    <TableCell><strong>Type</strong></TableCell>
+                    <TableCell><strong>Waiter</strong></TableCell>
                     <TableCell><strong>Customer</strong></TableCell>
-                    <TableCell><strong>Items</strong></TableCell>
-                    <TableCell><strong>Total</strong></TableCell>
+                    <TableCell align="right"><strong>Total</strong></TableCell>
                     <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Payment</strong></TableCell>
                     <TableCell><strong>Date</strong></TableCell>
-                    <TableCell align="right"><strong>Actions</strong></TableCell>
+                    <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                          {order.order_number}
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <CircularProgress />
+                      </TableCell>
+                    </TableRow>
+                  ) : orders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <Typography color="text.secondary">
+                          No orders found
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          {orderTypeIcons[order.order_type]}
-                          <Typography variant="body2">
-                            {order.order_type.replace('_', ' ')}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {order.customer_name || "Walk-in"}
-                        {order.table_number && (
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            Table {order.table_number}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>{order.order_items?.length || 0} items</TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
-                          {formatCurrency(order.total_amount)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={orderStatusColors[order.order_status]?.label}
-                          color={orderStatusColors[order.order_status]?.color}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={paymentStatusColors[order.payment_status]?.label}
-                          color={paymentStatusColors[order.payment_status]?.color}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(order.order_date).toLocaleDateString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(order.order_date).toLocaleTimeString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" onClick={() => handleViewOrder(order)}>
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                        {order.payment_status !== 'PAID' && (
+                    </TableRow>
+                  ) : (
+                    orders.map((order) => (
+                      <TableRow key={order.id} hover>
+                        <TableCell>{order.orderNumber}</TableCell>
+                        <TableCell>{order.waiter}</TableCell>
+                        <TableCell>{order.customerName || "—"}</TableCell>
+                        <TableCell align="right">
+                          <strong>{formatCurrency(order.total)}</strong>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.status}
+                            color={getStatusColor(order.status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{formatDate(order.timestamp)}</TableCell>
+                        <TableCell align="center">
                           <IconButton
                             size="small"
-                            color="primary"
-                            onClick={() => handleOpenPaymentDialog(order)}
+                            onClick={() => handleViewOrder(order)}
                           >
-                            <PaymentIcon fontSize="small" />
+                            <VisibilityIcon fontSize="small" />
                           </IconButton>
-                        )}
-                        {order.order_status !== 'COMPLETED' && order.order_status !== 'CANCELLED' && (
-                          <>
-                            <IconButton
-                              size="small"
-                              color="success"
-                              onClick={() => handleCompleteOrder(order.id)}
-                            >
-                              <CheckCircleIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleCancelOrder(order.id)}
-                            >
-                              <CancelIcon fontSize="small" />
-                            </IconButton>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {orders.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">No orders found</Typography>
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
+                <Pagination
+                  count={pagination.totalPages}
+                  page={pagination.page}
+                  onChange={(e, page) => setPagination({ ...pagination, page })}
+                  color="primary"
+                />
+              </Box>
+            )}
+          </Paper>
         </Box>
       </Box>
 
-      {/* View Order Dialog */}
-      <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Order Details - {selectedOrder?.order_number}</DialogTitle>
-        <DialogContent>
-          {selectedOrder && (
-            <Box sx={{ pt: 2 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Order Type</Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {selectedOrder.order_type.replace('_', ' ')}
+      {/* Order Details Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        {selectedOrder && (
+          <>
+            <DialogTitle>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Typography variant="h6" fontWeight={600}>
+                  Order Details
+                </Typography>
+                <Chip
+                  label={selectedOrder.status}
+                  color={getStatusColor(selectedOrder.status)}
+                  size="small"
+                />
+              </Box>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">
+                    Order Number
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {selectedOrder.orderNumber}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" color="text.secondary">Customer</Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {selectedOrder.customer_name || "Walk-in"}
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">
+                    Waiter
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {selectedOrder.waiter}
                   </Typography>
                 </Grid>
-                {selectedOrder.customer_phone && (
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" color="text.secondary">Phone</Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {selectedOrder.customer_phone}
-                    </Typography>
-                  </Grid>
-                )}
-                {selectedOrder.table_number && (
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" color="text.secondary">Table Number</Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {selectedOrder.table_number}
-                    </Typography>
-                  </Grid>
-                )}
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">
+                    Customer
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {selectedOrder.customerName || "—"}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">
+                    Date
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {formatDate(selectedOrder.timestamp)}
+                  </Typography>
+                </Grid>
               </Grid>
 
-              <Divider sx={{ my: 3 }} />
-
-              <Typography variant="h6" gutterBottom>Order Items</Typography>
-              <TableContainer>
+              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+                Order Items
+              </Typography>
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Item</TableCell>
-                      <TableCell align="right">Qty</TableCell>
-                      <TableCell align="right">Price</TableCell>
-                      <TableCell align="right">Total</TableCell>
+                      <TableCell><strong>Item</strong></TableCell>
+                      <TableCell align="center"><strong>Qty</strong></TableCell>
+                      <TableCell align="right"><strong>Price</strong></TableCell>
+                      <TableCell align="right"><strong>Total</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {selectedOrder.order_items?.map((item) => (
+                    {selectedOrder.orderItems?.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>{item.item_name}</TableCell>
-                        <TableCell align="right">{item.quantity} {item.unit}</TableCell>
-                        <TableCell align="right">{formatCurrency(item.unit_price)}</TableCell>
-                        <TableCell align="right">{formatCurrency(item.total_amount)}</TableCell>
+                        <TableCell>{item.itemName}</TableCell>
+                        <TableCell align="center">{item.quantity}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.price)}</TableCell>
+                        <TableCell align="right">
+                          <strong>{formatCurrency(item.totalPrice)}</strong>
+                        </TableCell>
                       </TableRow>
                     ))}
+                    <TableRow>
+                      <TableCell colSpan={3} align="right">
+                        <strong>Total:</strong>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="h6" fontWeight={700}>
+                          {formatCurrency(selectedOrder.total)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </TableContainer>
 
-              <Divider sx={{ my: 3 }} />
-
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <Box sx={{ minWidth: 250 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                    <Typography>Subtotal:</Typography>
-                    <Typography>{formatCurrency(selectedOrder.subtotal)}</Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                    <Typography>Tax:</Typography>
-                    <Typography>{formatCurrency(selectedOrder.tax_amount)}</Typography>
-                  </Box>
-                  <Divider sx={{ my: 1 }} />
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                    <Typography variant="h6">Total:</Typography>
-                    <Typography variant="h6">{formatCurrency(selectedOrder.total_amount)}</Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                    <Typography color="success.main">Paid:</Typography>
-                    <Typography color="success.main">{formatCurrency(selectedOrder.amount_paid)}</Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography color="error.main">Balance:</Typography>
-                    <Typography color="error.main">
-                      {formatCurrency(parseFloat(selectedOrder.total_amount) - parseFloat(selectedOrder.amount_paid || 0))}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenViewDialog(false)}>Close</Button>
-          {selectedOrder?.order_status !== 'COMPLETED' && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setOpenViewDialog(false);
-                handleOpenStatusDialog(selectedOrder);
-              }}
-            >
-              Update Status
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* Payment Dialog */}
-      <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Record Payment</DialogTitle>
-        <form onSubmit={handleRecordPayment}>
-          <DialogContent>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
-              <TextField
-                label="Payment Method"
-                select
-                value={paymentFormData.paymentMethod}
-                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
-                required
-                fullWidth
-              >
-                {paymentMethods.map((method) => (
-                  <MenuItem key={method.value} value={method.value}>
-                    {method.label}
-                  </MenuItem>
+              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+                Update Status
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                {["PENDING", "PAID", "UNPAID"].map((status) => (
+                  <Button
+                    key={status}
+                    variant={selectedOrder.status === status ? "contained" : "outlined"}
+                    color={getStatusColor(status)}
+                    onClick={() => handleStatusUpdate(selectedOrder.orderNumber, status)}
+                    disabled={updatingStatus || selectedOrder.status === status}
+                  >
+                    {status}
+                  </Button>
                 ))}
-              </TextField>
-
-              <TextField
-                label="Amount"
-                type="number"
-                value={paymentFormData.amount}
-                onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
-                required
-                fullWidth
-                inputProps={{ step: "0.01", min: "0" }}
-              />
-
-              {paymentFormData.paymentMethod === 'MPESA' && (
-                <TextField
-                  label="M-Pesa Code"
-                  value={paymentFormData.referenceNumber}
-                  onChange={(e) => setPaymentFormData({ ...paymentFormData, referenceNumber: e.target.value })}
-                  fullWidth
-                />
-              )}
-
-              <TextField
-                label="Notes"
-                multiline
-                rows={2}
-                value={paymentFormData.notes}
-                onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
-                fullWidth
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions sx={{ p: 3 }}>
-            <Button onClick={() => setOpenPaymentDialog(false)} disabled={submitting}>Cancel</Button>
-            <Button type="submit" variant="contained" disabled={submitting}>
-              {submitting ? <CircularProgress size={20} /> : "Record Payment"}
-            </Button>
-          </DialogActions>
-        </form>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDialogOpen(false)}>Close</Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
-
-      {/* Update Status Dialog */}
-      <Dialog open={openStatusDialog} onClose={() => setOpenStatusDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Update Order Status</DialogTitle>
-        <form onSubmit={handleUpdateStatus}>
-          <DialogContent>
-            <TextField
-              label="Order Status"
-              select
-              value={statusFormData.orderStatus}
-              onChange={(e) => setStatusFormData({ ...statusFormData, orderStatus: e.target.value })}
-              required
-              fullWidth
-            >
-              <MenuItem value="PENDING">Pending</MenuItem>
-              <MenuItem value="PREPARING">Preparing</MenuItem>
-              <MenuItem value="READY">Ready</MenuItem>
-              <MenuItem value="COMPLETED">Completed</MenuItem>
-            </TextField>
-          </DialogContent>
-          <DialogActions sx={{ p: 3 }}>
-            <Button onClick={() => setOpenStatusDialog(false)} disabled={submitting}>Cancel</Button>
-            <Button type="submit" variant="contained" disabled={submitting}>
-              {submitting ? <CircularProgress size={20} /> : "Update Status"}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

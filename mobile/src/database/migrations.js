@@ -61,5 +61,18 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        // Add sync tracking fields to orders table
+        addColumns({
+          table: 'orders',
+          columns: [
+            { name: 'is_synced', type: 'boolean' },
+            { name: 'synced_at', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });
