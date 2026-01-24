@@ -42,6 +42,19 @@ const MenuView = ({onCreateOrder, onError}) => {
 
   const loadMenuItems = async () => {
     try {
+      // Try to load from cache first
+      const isCacheValid = await menuService.isCacheValid();
+      
+      if (isCacheValid) {
+        const cachedItems = await menuService.getMenuFromCache();
+        if (cachedItems && cachedItems.length > 0) {
+          setMenuItems(cachedItems);
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // If no valid cache, load from database
       const menuItemsCollection = database.collections.get('menu_items');
       const items = await menuItemsCollection.query().fetch();
       
@@ -51,6 +64,9 @@ const MenuView = ({onCreateOrder, onError}) => {
         price: item.price,
         category: item.category,
       }));
+      
+      // Save to cache for next time
+      await menuService.saveMenuToCache(items);
       
       setMenuItems(formattedItems);
       setLoading(false);
@@ -138,6 +154,9 @@ const MenuView = ({onCreateOrder, onError}) => {
           isAvailable: true,
         });
         
+        // Clear cache to ensure fresh data
+        await menuService.clearMenuCache();
+        
         // Reload menu items from database
         await loadMenuItems();
         
@@ -182,6 +201,9 @@ const MenuView = ({onCreateOrder, onError}) => {
           price: parseInt(editItemPrice),
         });
         
+        // Clear cache to ensure fresh data
+        await menuService.clearMenuCache();
+        
         // Reload menu items
         await loadMenuItems();
         
@@ -207,6 +229,9 @@ const MenuView = ({onCreateOrder, onError}) => {
       
       // Delete from database
       await menuService.deleteMenuItem(menuItem);
+      
+      // Clear cache to ensure fresh data
+      await menuService.clearMenuCache();
       
       // Reload menu items
       await loadMenuItems();

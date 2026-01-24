@@ -1,7 +1,67 @@
 import { database } from '../database';
 import MenuItem from '../database/models/MenuItem';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const MENU_CACHE_KEY = '@menu_items_cache';
+const MENU_CACHE_TIMESTAMP_KEY = '@menu_items_cache_timestamp';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 export const menuService = {
+  // Check if cache is valid
+  async isCacheValid() {
+    try {
+      const timestamp = await AsyncStorage.getItem(MENU_CACHE_TIMESTAMP_KEY);
+      if (!timestamp) return false;
+      
+      const cacheAge = Date.now() - parseInt(timestamp, 10);
+      return cacheAge < CACHE_DURATION;
+    } catch (error) {
+      console.error('Error checking cache validity:', error);
+      return false;
+    }
+  },
+
+  // Get menu items from cache
+  async getMenuFromCache() {
+    try {
+      const cachedData = await AsyncStorage.getItem(MENU_CACHE_KEY);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting menu from cache:', error);
+      return null;
+    }
+  },
+
+  // Save menu items to cache
+  async saveMenuToCache(menuItems) {
+    try {
+      const serializedItems = menuItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        category: item.category,
+        isAvailable: item.isAvailable,
+      }));
+      
+      await AsyncStorage.setItem(MENU_CACHE_KEY, JSON.stringify(serializedItems));
+      await AsyncStorage.setItem(MENU_CACHE_TIMESTAMP_KEY, Date.now().toString());
+    } catch (error) {
+      console.error('Error saving menu to cache:', error);
+    }
+  },
+
+  // Clear menu cache
+  async clearMenuCache() {
+    try {
+      await AsyncStorage.removeItem(MENU_CACHE_KEY);
+      await AsyncStorage.removeItem(MENU_CACHE_TIMESTAMP_KEY);
+    } catch (error) {
+      console.error('Error clearing menu cache:', error);
+    }
+  },
   // Get all menu items
   async getAllMenuItems() {
     const menuItemsCollection = database.collections.get('menu_items');
