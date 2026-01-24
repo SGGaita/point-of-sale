@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  WAITER
+  CASHIER
+  CHEF
+  BARTENDER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(WAITER)
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+
+  sales     Sale[]
+  creator   User?    @relation("UserCreator", fields: [createdBy], references: [id])
+  createdUsers User[] @relation("UserCreator")
+  
+  @@map("users")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  sku         String   @unique
+  price       Decimal  @db.Decimal(10, 2)
+  cost        Decimal? @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  saleItems   SaleItem[]
+  
+  @@map("products")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales     Sale[]
+  
+  @@map("customers")
+}
+
+model Sale {
+  id          String   @id @default(cuid())
+  saleNumber  String   @unique
+  userId      String
+  customerId  String?
+  subtotal    Decimal  @db.Decimal(10, 2)
+  tax         Decimal  @db.Decimal(10, 2) @default(0)
+  discount    Decimal  @db.Decimal(10, 2) @default(0)
+  total       Decimal  @db.Decimal(10, 2)
+  status      String   @default("completed")
+  paymentMethod String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  items       SaleItem[]
+  
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2)
+  subtotal  Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+  
+  @@map("sale_items")
+}
