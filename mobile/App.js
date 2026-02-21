@@ -6,6 +6,7 @@ import {StyleSheet} from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import {DatabaseProvider} from './src/database/DatabaseProvider';
 import SplashScreen from './src/components/SplashScreen';
+import {syncService} from './src/services/syncService';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +21,27 @@ const App = () => {
 
     initializeApp();
   }, []);
+
+  useEffect(() => {
+    // Start auto-sync after app is loaded
+    if (!isLoading) {
+      console.log('Starting auto-sync service...');
+      
+      // Initial sync on app start
+      syncService.syncOrdersToBackend().catch(err => {
+        console.log('Initial sync failed:', err.message);
+      });
+
+      // Start auto-sync every 5 minutes
+      const stopAutoSync = syncService.startAutoSync(5);
+
+      // Cleanup on unmount
+      return () => {
+        console.log('Stopping auto-sync service...');
+        stopAutoSync();
+      };
+    }
+  }, [isLoading]);
 
   if (isLoading) {
     return <SplashScreen />;

@@ -37,7 +37,18 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
   };
 
   const getWaiterStats = (waiterName) => {
-    const waiterOrders = orders.filter(order => order.waiter === waiterName);
+    // Filter by current date (only show today's orders)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayOrders = orders.filter(order => {
+      const orderDate = new Date(order.timestamp);
+      return orderDate >= today && orderDate < tomorrow;
+    });
+
+    const waiterOrders = todayOrders.filter(order => order.waiter === waiterName);
     const totalOrders = waiterOrders.length;
     const paidOrdersList = waiterOrders.filter(order => order.status === 'paid');
     const unpaidOrdersList = waiterOrders.filter(order => order.status === 'unpaid' || order.status === 'pending');
@@ -232,6 +243,21 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
                                 onBlur={() => handleCustomerNameBlur(order.id)}
                               />
                             </View>
+                            
+                            {/* Order Items Breakdown */}
+                            {order.items && order.items.length > 0 && (
+                              <View style={styles.orderItemsBreakdown}>
+                                {order.items.map((item, index) => (
+                                  <View key={index} style={styles.orderItemRow}>
+                                    <Text style={styles.orderItemName}>
+                                      {item.name} x{item.quantity}
+                                    </Text>
+                                    <Text style={styles.orderItemPrice}>{item.totalPrice} Ksh</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                            
                             <View style={styles.orderActions}>
                               <TouchableOpacity
                                 style={styles.markPaidBtn}
@@ -689,6 +715,30 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
     fontWeight: '600',
+  },
+  orderItemsBreakdown: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  orderItemName: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  orderItemPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginLeft: 12,
   },
 });
 

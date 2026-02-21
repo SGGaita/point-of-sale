@@ -53,9 +53,8 @@ export async function GET(request) {
 
     const statusCounts = {
       total: count || 0,
-      pending: allOrders?.filter(o => o.status === 'PENDING').length || 0,
       paid: allOrders?.filter(o => o.status === 'PAID').length || 0,
-      unpaid: allOrders?.filter(o => o.status === 'UNPAID').length || 0,
+      unpaid: allOrders?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING').length || 0,
     };
 
     const totalRevenue = allOrders
@@ -63,7 +62,7 @@ export async function GET(request) {
       .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0;
 
     const unpaidAmount = allOrders
-      ?.filter(o => o.status === 'UNPAID')
+      ?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING')
       .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0;
 
     // Transform order_items to match expected format

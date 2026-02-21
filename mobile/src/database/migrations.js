@@ -74,5 +74,50 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 5,
+      steps: [
+        // Add expense templates table
+        createTable({
+          name: 'expense_templates',
+          columns: [
+            { name: 'name', type: 'string' },
+            { name: 'category', type: 'string', isIndexed: true },
+            { name: 'unit', type: 'string' },
+            { name: 'is_active', type: 'boolean' },
+            { name: 'sort_order', type: 'number' },
+            { name: 'is_synced', type: 'boolean' },
+            { name: 'synced_at', type: 'number', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+        // Add new fields to expenses table
+        addColumns({
+          table: 'expenses',
+          columns: [
+            { name: 'template_id', type: 'string', isOptional: true, isIndexed: true },
+            { name: 'quantity', type: 'number', isOptional: true },
+            { name: 'unit_cost', type: 'number', isOptional: true },
+            { name: 'is_synced', type: 'boolean' },
+            { name: 'synced_at', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    {
+      toVersion: 6,
+      steps: [
+        // Add sync tracking fields to menu_items table
+        addColumns({
+          table: 'menu_items',
+          columns: [
+            { name: 'server_id', type: 'string', isOptional: true },
+            { name: 'is_synced', type: 'boolean' },
+            { name: 'synced_at', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

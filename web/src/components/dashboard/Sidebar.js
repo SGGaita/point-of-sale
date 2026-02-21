@@ -25,6 +25,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleIcon from "@mui/icons-material/People";
 import BadgeIcon from "@mui/icons-material/Badge";
+import PersonIcon from "@mui/icons-material/Person";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -36,6 +37,7 @@ const navItems = [
   { icon: <InventoryIcon />, label: "Inventory", path: "/dashboard/inventory" },
   { icon: <ShoppingCartIcon />, label: "Orders", path: "/dashboard/orders" },
   { icon: <BadgeIcon />, label: "Staff", path: "/dashboard/staff" },
+  { icon: <PersonIcon />, label: "Waiters", path: "/dashboard/waiters" },
   { icon: <AssessmentIcon />, label: "Reports", path: "/dashboard/reports" },
   { icon: <SettingsIcon />, label: "Settings", path: "/dashboard/settings" },
 ];

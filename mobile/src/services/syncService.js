@@ -3,7 +3,7 @@ import { Q } from '@nozbe/watermelondb';
 import { networkUtils } from '../utils/networkUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.APP_API_URL || 'https://pos-web-delta-opal.vercel.app';
 const SYNC_STATUS_KEY = '@last_sync_status';
 const SYNC_TIMESTAMP_KEY = '@last_sync_timestamp';
 
@@ -47,6 +47,7 @@ export const syncService = {
   },
 
   async syncOrdersToBackend() {
+    let unsyncedOrders = [];
     try {
       const isConnected = await networkUtils.isConnected();
       if (!isConnected) {
@@ -59,7 +60,7 @@ export const syncService = {
         };
       }
 
-      const unsyncedOrders = await this.getUnsyncedOrders();
+      unsyncedOrders = await this.getUnsyncedOrders();
       
       if (unsyncedOrders.length === 0) {
         console.log('No orders to sync');
@@ -75,6 +76,9 @@ export const syncService = {
         unsyncedOrders.map(order => this.prepareOrderForSync(order))
       );
 
+      console.log('Syncing to:', `${API_BASE_URL}/api/orders/sync`);
+      console.log('Orders to sync:', ordersData.length);
+
       const response = await fetch(`${API_BASE_URL}/api/orders/sync`, {
         method: 'POST',
         headers: {
@@ -84,10 +88,17 @@ export const syncService = {
       });
 
       if (!response.ok) {
-        throw new Error(`Sync failed with status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Sync failed with status: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+
+      console.log('Sync result:', JSON.stringify(result, null, 2));
+
+      if (result.errors && result.errors.length > 0) {
+        console.error('Sync errors:', result.errors);
+      }
 
       if (result.success && result.syncedOrders) {
         await database.write(async () => {
@@ -196,24 +207,43 @@ export const syncService = {
 
   startAutoSync(intervalMinutes = 5) {
     const intervalMs = intervalMinutes * 60 * 1000;
+    let isSyncing = false;
+    let networkDebounceTimer = null;
     
     const syncInterval = setInterval(async () => {
+      if (isSyncing) return;
+      
       const isConnected = await networkUtils.isConnected();
       if (isConnected) {
         console.log('Auto-sync triggered...');
+        isSyncing = true;
         await this.syncOrdersToBackend();
+        isSyncing = false;
       }
     }, intervalMs);
 
     const unsubscribe = networkUtils.subscribeToNetworkChanges(async (isConnected) => {
-      if (isConnected) {
-        console.log('Network connected. Triggering sync...');
-        await this.syncOrdersToBackend();
+      if (isConnected && !isSyncing) {
+        // Debounce network reconnection to avoid multiple triggers
+        if (networkDebounceTimer) {
+          clearTimeout(networkDebounceTimer);
+        }
+        
+        networkDebounceTimer = setTimeout(async () => {
+          console.log('Network connected. Triggering sync...');
+          isSyncing = true;
+          await this.syncOrdersToBackend();
+          isSyncing = false;
+          networkDebounceTimer = null;
+        }, 2000); // Wait 2 seconds before syncing on network change
       }
     });
 
     return () => {
       clearInterval(syncInterval);
+      if (networkDebounceTimer) {
+        clearTimeout(networkDebounceTimer);
+      }
       unsubscribe();
     };
   },

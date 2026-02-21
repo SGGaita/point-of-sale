@@ -35,6 +35,8 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import FilterListIcon from "@mui/icons-material/FilterList";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 const drawerWidth = 260;
 
@@ -47,7 +49,7 @@ export default function OrdersPage() {
   const [summary, setSummary] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 50,
+    pageSize: 10,
     total: 0,
     totalPages: 0,
   });
@@ -57,6 +59,10 @@ export default function OrdersPage() {
   const [waiterFilter, setWaiterFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Sorting
+  const [sortField, setSortField] = useState("timestamp");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   // Dialog
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -155,23 +161,65 @@ export default function OrdersPage() {
     router.push("/login");
   };
 
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const sortedOrders = [...orders].sort((a, b) => {
+    let aValue, bValue;
+
+    switch (sortField) {
+      case "order_number":
+        aValue = a.order_number;
+        bValue = b.order_number;
+        break;
+      case "status":
+        aValue = a.status;
+        bValue = b.status;
+        break;
+      case "timestamp":
+        aValue = new Date(a.timestamp).getTime();
+        bValue = new Date(b.timestamp).getTime();
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
   const getStatusColor = (status) => {
     switch (status) {
       case "PAID":
         return "success";
       case "UNPAID":
-        return "error";
       case "PENDING":
-        return "warning";
+        return "error";
       default:
         return "default";
     }
   };
 
+  const getDisplayStatus = (status) => {
+    if (status === "PENDING") {
+      return "UNPAID";
+    }
+    return status;
+  };
+
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-KE", {
       style: "currency",
-      currency: "USD",
+      currency: "KES",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -220,74 +268,111 @@ export default function OrdersPage() {
 
           {/* Summary Cards */}
           {summary && (
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card elevation={0} sx={{ border: 1, borderColor: "divider" }}>
-                  <CardContent>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 3 }}>
+              <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    p: 2.5,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    height: "100%",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      borderColor: "#000",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+                    }
+                  }}
+                >
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
                       Total Orders
                     </Typography>
-                    <Typography variant="h4" fontWeight={700}>
-                      {summary.total}
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#9e9e9e" }} />
+                  </Box>
+                  <Typography variant="h3" fontWeight={700} sx={{ mb: 0.5 }}>
+                    {summary.total}
+                  </Typography>
+                </Paper>
+              </Box>
+              
+              <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    p: 2.5,
+                    border: 1,
+                    borderColor: "success.main",
+                    borderRadius: 2,
+                    height: "100%",
+                    bgcolor: "#f1f8f4",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      borderColor: "success.dark",
+                      boxShadow: "0 2px 8px rgba(46,125,50,0.15)"
+                    }
+                  }}
+                >
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                      Paid
                     </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card elevation={0} sx={{ border: 1, borderColor: "divider", bgcolor: "#e8f5e9" }}>
-                  <CardContent>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Paid Orders
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "success.main" }} />
+                  </Box>
+                  <Typography variant="h3" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
+                    {summary.paid}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600} color="success.dark">
+                    {formatCurrency(summary.totalRevenue)}
+                  </Typography>
+                </Paper>
+              </Box>
+              
+              <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    p: 2.5,
+                    border: 1,
+                    borderColor: "error.main",
+                    borderRadius: 2,
+                    height: "100%",
+                    bgcolor: "#fef5f5",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      borderColor: "error.dark",
+                      boxShadow: "0 2px 8px rgba(211,47,47,0.15)"
+                    }
+                  }}
+                >
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                      Unpaid
                     </Typography>
-                    <Typography variant="h4" fontWeight={700} color="success.main">
-                      {summary.paid}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Revenue: {formatCurrency(summary.totalRevenue)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card elevation={0} sx={{ border: 1, borderColor: "divider", bgcolor: "#ffebee" }}>
-                  <CardContent>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Unpaid Orders
-                    </Typography>
-                    <Typography variant="h4" fontWeight={700} color="error.main">
-                      {summary.unpaid}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Amount: {formatCurrency(summary.unpaidAmount)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card elevation={0} sx={{ border: 1, borderColor: "divider", bgcolor: "#fff3e0" }}>
-                  <CardContent>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Pending Orders
-                    </Typography>
-                    <Typography variant="h4" fontWeight={700} color="warning.main">
-                      {summary.pending}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "error.main" }} />
+                  </Box>
+                  <Typography variant="h3" fontWeight={700} color="error.main" sx={{ mb: 0.5 }}>
+                    {summary.unpaid}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600} color="error.dark">
+                    {formatCurrency(summary.unpaidAmount)}
+                  </Typography>
+                </Paper>
+              </Box>
+            </Box>
           )}
 
           {/* Filters */}
-          <Paper elevation={0} sx={{ p: 3, mb: 3, border: 1, borderColor: "divider" }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          <Paper elevation={0} sx={{ p: 3, mb: 3, border: 1, borderColor: "divider", borderRadius: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
               <FilterListIcon />
               <Typography variant="h6" fontWeight={600}>
                 Filters
               </Typography>
             </Box>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
+              <Box sx={{ flex: "1 1 200px", minWidth: "200px" }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -301,11 +386,10 @@ export default function OrdersPage() {
                     <MenuItem value="ALL">All Status</MenuItem>
                     <MenuItem value="PAID">Paid</MenuItem>
                     <MenuItem value="UNPAID">Unpaid</MenuItem>
-                    <MenuItem value="PENDING">Pending</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              </Box>
+              <Box sx={{ flex: "1 1 200px", minWidth: "200px" }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -319,8 +403,8 @@ export default function OrdersPage() {
                     }
                   }}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              </Box>
+              <Box sx={{ flex: "1 1 200px", minWidth: "200px" }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -330,8 +414,8 @@ export default function OrdersPage() {
                   onChange={(e) => setStartDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              </Box>
+              <Box sx={{ flex: "1 1 200px", minWidth: "200px" }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -341,22 +425,37 @@ export default function OrdersPage() {
                   onChange={(e) => setEndDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                 />
-              </Grid>
-            </Grid>
-            <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
-              <Button variant="contained" onClick={() => {
-                setPagination({ ...pagination, page: 1 });
-                fetchOrders();
-              }}>
+              </Box>
+            </Box>
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              <Button 
+                variant="contained" 
+                onClick={() => {
+                  setPagination({ ...pagination, page: 1 });
+                  fetchOrders();
+                }}
+                sx={{ 
+                  bgcolor: "#000",
+                  "&:hover": { bgcolor: "#1a1a1a" }
+                }}
+              >
                 Apply Filters
               </Button>
-              <Button variant="outlined" onClick={() => {
-                setStatusFilter("ALL");
-                setWaiterFilter("");
-                setStartDate("");
-                setEndDate("");
-                setPagination({ ...pagination, page: 1 });
-              }}>
+              <Button 
+                variant="outlined" 
+                onClick={() => {
+                  setStatusFilter("ALL");
+                  setWaiterFilter("");
+                  setStartDate("");
+                  setEndDate("");
+                  setPagination({ ...pagination, page: 1 });
+                }}
+                sx={{
+                  borderColor: "#000",
+                  color: "#000",
+                  "&:hover": { borderColor: "#1a1a1a", bgcolor: "rgba(0,0,0,0.04)" }
+                }}
+              >
                 Clear
               </Button>
             </Box>
@@ -370,18 +469,66 @@ export default function OrdersPage() {
           )}
 
           {/* Orders Table */}
-          <Paper elevation={0} sx={{ border: 1, borderColor: "divider" }}>
+          <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Order #</strong></TableCell>
-                    <TableCell><strong>Waiter</strong></TableCell>
-                    <TableCell><strong>Customer</strong></TableCell>
-                    <TableCell align="right"><strong>Total</strong></TableCell>
-                    <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Date</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
+                  <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 700, 
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" }
+                      }}
+                      onClick={() => handleSort("order_number")}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        Order #
+                        {sortField === "order_number" && (
+                          sortOrder === "asc" ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Waiter</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Customer</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Total</TableCell>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 700, 
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" }
+                      }}
+                      onClick={() => handleSort("status")}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        Status
+                        {sortField === "status" && (
+                          sortOrder === "asc" ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 700, 
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" }
+                      }}
+                      onClick={() => handleSort("timestamp")}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        Date
+                        {sortField === "timestamp" && (
+                          sortOrder === "asc" ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -400,26 +547,42 @@ export default function OrdersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    orders.map((order) => (
-                      <TableRow key={order.id} hover>
-                        <TableCell>{order.orderNumber}</TableCell>
+                    sortedOrders.map((order) => (
+                      <TableRow 
+                        key={order.id} 
+                        hover
+                        sx={{ 
+                          "&:hover": { bgcolor: "rgba(0,0,0,0.02)" },
+                          transition: "background-color 0.2s"
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 600 }}>{order.order_number}</TableCell>
                         <TableCell>{order.waiter}</TableCell>
-                        <TableCell>{order.customerName || "—"}</TableCell>
+                        <TableCell sx={{ color: order.customer_name ? "text.primary" : "text.secondary" }}>
+                          {order.customer_name || "Walk-in"}
+                        </TableCell>
                         <TableCell align="right">
-                          <strong>{formatCurrency(order.total)}</strong>
+                          <Typography variant="body2" fontWeight={700}>
+                            {formatCurrency(order.total)}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={order.status}
+                            label={getDisplayStatus(order.status)}
                             color={getStatusColor(order.status)}
                             size="small"
+                            sx={{ fontWeight: 600 }}
                           />
                         </TableCell>
-                        <TableCell>{formatDate(order.timestamp)}</TableCell>
+                        <TableCell sx={{ fontSize: "0.875rem" }}>{formatDate(order.timestamp)}</TableCell>
                         <TableCell align="center">
                           <IconButton
                             size="small"
                             onClick={() => handleViewOrder(order)}
+                            sx={{ 
+                              color: "#000",
+                              "&:hover": { bgcolor: "rgba(0,0,0,0.08)" }
+                            }}
                           >
                             <VisibilityIcon fontSize="small" />
                           </IconButton>
@@ -433,12 +596,37 @@ export default function OrdersPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
+              <Box sx={{ 
+                p: 3, 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                borderTop: 1,
+                borderColor: "divider",
+                bgcolor: "#fafafa",
+                flexWrap: "wrap",
+                gap: 2
+              }}>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {((pagination.page - 1) * pagination.pageSize) + 1} to {Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total} orders
+                </Typography>
                 <Pagination
                   count={pagination.totalPages}
                   page={pagination.page}
                   onChange={(e, page) => setPagination({ ...pagination, page })}
                   color="primary"
+                  sx={{
+                    "& .MuiPaginationItem-root": {
+                      fontWeight: 600
+                    },
+                    "& .Mui-selected": {
+                      bgcolor: "#000 !important",
+                      color: "#fff",
+                      "&:hover": {
+                        bgcolor: "#1a1a1a !important"
+                      }
+                    }
+                  }}
                 />
               </Box>
             )}
@@ -450,116 +638,159 @@ export default function OrdersPage() {
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        maxWidth="md"
+        maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
+          }
+        }}
       >
         {selectedOrder && (
           <>
-            <DialogTitle>
+            <DialogTitle sx={{ pb: 1.5, pt: 2.5, px: 3, borderBottom: 1, borderColor: "divider" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography variant="h6" fontWeight={600}>
-                  Order Details
-                </Typography>
+                <Box>
+                  <Typography variant="h6" fontWeight={700}>
+                    Order #{selectedOrder.order_number}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDate(selectedOrder.timestamp)}
+                  </Typography>
+                </Box>
                 <Chip
-                  label={selectedOrder.status}
+                  label={getDisplayStatus(selectedOrder.status)}
                   color={getStatusColor(selectedOrder.status)}
                   size="small"
+                  sx={{ fontWeight: 600 }}
                 />
               </Box>
             </DialogTitle>
-            <DialogContent dividers>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">
-                    Order Number
-                  </Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {selectedOrder.orderNumber}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">
+            
+            <DialogContent sx={{ px: 3, py: 2.5 }}>
+              {/* Order Information */}
+              <Box sx={{ display: "flex", gap: 3, mb: 2.5, pb: 2.5, borderBottom: 1, borderColor: "divider" }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                     Waiter
                   </Typography>
-                  <Typography variant="body1" fontWeight={600}>
+                  <Typography variant="body2" fontWeight={600}>
                     {selectedOrder.waiter}
                   </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                     Customer
                   </Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {selectedOrder.customerName || "—"}
+                  <Typography variant="body2" fontWeight={600} sx={{ color: selectedOrder.customer_name ? "text.primary" : "text.secondary" }}>
+                    {selectedOrder.customer_name || "Walk-in"}
                   </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">
-                    Date
-                  </Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {formatDate(selectedOrder.timestamp)}
-                  </Typography>
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
 
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Order Items
-              </Typography>
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell><strong>Item</strong></TableCell>
-                      <TableCell align="center"><strong>Qty</strong></TableCell>
-                      <TableCell align="right"><strong>Price</strong></TableCell>
-                      <TableCell align="right"><strong>Total</strong></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {selectedOrder.orderItems?.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.itemName}</TableCell>
-                        <TableCell align="center">{item.quantity}</TableCell>
-                        <TableCell align="right">{formatCurrency(item.price)}</TableCell>
-                        <TableCell align="right">
-                          <strong>{formatCurrency(item.totalPrice)}</strong>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow>
-                      <TableCell colSpan={3} align="right">
-                        <strong>Total:</strong>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="h6" fontWeight={700}>
-                          {formatCurrency(selectedOrder.total)}
+              {/* Order Items */}
+              <Box sx={{ mb: 2.5 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                  Items
+                </Typography>
+                <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
+                  {selectedOrder.orderItems?.map((item, index) => (
+                    <Box 
+                      key={item.id}
+                      sx={{ 
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        p: 1.5,
+                        bgcolor: index % 2 === 0 ? "#fafafa" : "#fff",
+                        borderBottom: index < selectedOrder.orderItems.length - 1 ? 1 : 0,
+                        borderColor: "divider"
+                      }}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight={500}>
+                          {item.itemName}
                         </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <Typography variant="subtitle2" gutterBottom fontWeight={600}>
-                Update Status
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {["PENDING", "PAID", "UNPAID"].map((status) => (
-                  <Button
-                    key={status}
-                    variant={selectedOrder.status === status ? "contained" : "outlined"}
-                    color={getStatusColor(status)}
-                    onClick={() => handleStatusUpdate(selectedOrder.orderNumber, status)}
-                    disabled={updatingStatus || selectedOrder.status === status}
+                      </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 40, textAlign: "center" }}>
+                          × {item.quantity}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 80, textAlign: "right" }}>
+                          {formatCurrency(item.price)}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600} sx={{ minWidth: 90, textAlign: "right" }}>
+                          {formatCurrency(item.totalPrice)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                  
+                  {/* Total */}
+                  <Box 
+                    sx={{ 
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      p: 1.5,
+                      bgcolor: "#f5f5f5",
+                      borderTop: 2,
+                      borderColor: "divider"
+                    }}
                   >
-                    {status}
-                  </Button>
-                ))}
+                    <Typography variant="body1" fontWeight={700}>
+                      Total
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700}>
+                      {formatCurrency(selectedOrder.total)}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Status Update */}
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                  Update Status
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1.5 }}>
+                  {["PENDING", "PAID"].map((status) => (
+                    <Button
+                      key={status}
+                      variant={selectedOrder.status === status ? "contained" : "outlined"}
+                      color={getStatusColor(status)}
+                      onClick={() => handleStatusUpdate(selectedOrder.order_number, status)}
+                      disabled={updatingStatus || selectedOrder.status === status}
+                      fullWidth
+                      sx={{
+                        py: 1,
+                        fontWeight: 600,
+                        fontSize: "0.875rem"
+                      }}
+                    >
+                      {updatingStatus && selectedOrder.status !== status ? (
+                        <CircularProgress size={18} color="inherit" />
+                      ) : (
+                        getDisplayStatus(status)
+                      )}
+                    </Button>
+                  ))}
+                </Box>
               </Box>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDialogOpen(false)}>Close</Button>
+            
+            <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: "divider" }}>
+              <Button 
+                onClick={() => setDialogOpen(false)}
+                variant="text"
+                sx={{
+                  fontWeight: 600,
+                  color: "text.secondary"
+                }}
+              >
+                Close
+              </Button>
             </DialogActions>
           </>
         )}

@@ -160,13 +160,24 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
       if (!waiterStats[order.waiter]) {
         waiterStats[order.waiter] = {
           name: order.waiter,
+          paidRevenue: 0,
+          unpaidRevenue: 0,
           totalRevenue: 0,
+          paidOrders: 0,
+          unpaidOrders: 0,
           totalOrders: 0,
         };
       }
+      
       if (order.status === 'paid') {
-        waiterStats[order.waiter].totalRevenue += order.total;
+        waiterStats[order.waiter].paidRevenue += order.total;
+        waiterStats[order.waiter].paidOrders += 1;
+      } else if (order.status === 'unpaid' || order.status === 'pending') {
+        waiterStats[order.waiter].unpaidRevenue += order.total;
+        waiterStats[order.waiter].unpaidOrders += 1;
       }
+      
+      waiterStats[order.waiter].totalRevenue += order.total;
       waiterStats[order.waiter].totalOrders += 1;
     });
 
@@ -336,25 +347,41 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
           </Text>
         </View>
 
-        {/* Top Sales per Waiter */}
+        {/* Total Sales per Waiter */}
         <View style={styles.topSalesCard}>
-          <Text style={styles.topSalesTitle}>Top Sales per Waiter</Text>
+          <Text style={styles.topSalesTitle}>Total Sales per Waiter</Text>
           
           {topSalesPerWaiter.length === 0 ? (
             <Text style={styles.emptyText}>No sales data available</Text>
           ) : (
             topSalesPerWaiter.map((waiter, index) => (
-              <View key={index} style={styles.waiterSalesRow}>
-                <View style={styles.waiterSalesLeft}>
-                  <Text style={styles.waiterSalesName}>{waiter.name}</Text>
-                  <Text style={styles.waiterSalesOrders}>Paid: {waiter.totalOrders} - Unpaid: 1</Text>
+              <View key={index} style={styles.waiterSalesCard}>
+                <View style={styles.waiterCardHeader}>
+                  <Text style={styles.waiterCardName}>{waiter.name}</Text>
+                  <View style={styles.waiterRevenueRow}>
+                    <View style={styles.waiterRevenueColumn}>
+                      <Text style={styles.waiterRevenueLabel}>Total</Text>
+                      <Text style={[styles.waiterRevenueValue, {color: colors.danger}]}>
+                        {waiter.totalRevenue} Ksh
+                      </Text>
+                    </View>
+                    <View style={styles.waiterRevenueColumn}>
+                      <Text style={styles.waiterRevenueLabel}>Paid</Text>
+                      <Text style={[styles.waiterRevenueValue, {color: colors.success}]}>
+                        {waiter.paidRevenue} Ksh
+                      </Text>
+                    </View>
+                    <View style={styles.waiterRevenueColumn}>
+                      <Text style={styles.waiterRevenueLabel}>Unpaid</Text>
+                      <Text style={[styles.waiterRevenueValue, {color: colors.danger}]}>
+                        {waiter.unpaidRevenue} Ksh
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.waiterSalesRight}>
-                  <Text style={styles.waiterSalesLabel}>Orders</Text>
-                  <Text style={styles.waiterSalesValue}>{waiter.totalOrders}</Text>
-                  <Text style={styles.waiterSalesLabel}>Revenue</Text>
-                  <Text style={styles.waiterSalesRevenue}>{waiter.totalRevenue} Ksh</Text>
-                </View>
+                <Text style={styles.waiterOrdersSummary}>
+                  Orders: {waiter.totalOrders} (Paid: {waiter.paidOrders} • Unpaid: {waiter.unpaidOrders})
+                </Text>
               </View>
             ))
           )}
@@ -610,43 +637,43 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 16,
   },
-  waiterSalesRow: {
+  waiterSalesCard: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.danger,
+  },
+  waiterCardHeader: {
+    marginBottom: 12,
+  },
+  waiterCardName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.danger,
+    marginBottom: 12,
+  },
+  waiterRevenueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
-  waiterSalesLeft: {
+  waiterRevenueColumn: {
     flex: 1,
+    alignItems: 'center',
   },
-  waiterSalesName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  waiterSalesOrders: {
+  waiterRevenueLabel: {
     fontSize: 12,
     color: colors.textSecondary,
-  },
-  waiterSalesRight: {
-    alignItems: 'flex-end',
-  },
-  waiterSalesLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  waiterSalesValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: 4,
   },
-  waiterSalesRevenue: {
+  waiterRevenueValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: colors.primary,
+  },
+  waiterOrdersSummary: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   salesPerItemCard: {
     backgroundColor: colors.white,

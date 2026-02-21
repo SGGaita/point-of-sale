@@ -1,11 +1,19 @@
-import React, {useState} from 'react';
-import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform, Share} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows} from '../theme/theme';
+import {syncService} from '../services/syncService';
+import DocumentPicker from 'react-native-document-picker';
+import XLSX from 'xlsx';
+import RNFS from 'react-native-fs';
+import {excelImportService} from '../services/excelImportService';
 
-const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt}) => {
+const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [syncing, setSyncing] = useState(false);
+  const [syncStats, setSyncStats] = useState(null);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
 
   const filters = [
     {id: 'all', label: 'All'},
@@ -13,8 +21,275 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt}) => {
     {id: 'unpaid', label: 'Unpaid'},
   ];
 
+  useEffect(() => {
+    loadSyncStats();
+  }, [orders]);
+
+  const loadSyncStats = async () => {
+    try {
+      const stats = await syncService.getSyncStats();
+      setSyncStats(stats);
+      if (stats.lastSyncTimestamp) {
+        setLastSyncTime(new Date(stats.lastSyncTimestamp));
+      }
+    } catch (error) {
+      console.error('Error loading sync stats:', error);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncService.syncOrdersToBackend();
+      await loadSyncStats();
+      
+      if (result.success) {
+        Alert.alert(
+          'Sync Successful',
+          `${result.synced} order${result.synced !== 1 ? 's' : ''} synced to backend`,
+          [{text: 'OK'}]
+        );
+      } else {
+        Alert.alert(
+          'Sync Failed',
+          result.error || 'Failed to sync orders',
+          [{text: 'OK'}]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Sync Error',
+        error.message || 'An error occurred while syncing',
+        [{text: 'OK'}]
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleExportSalesData = async () => {
+    const todayOrders = getFilteredOrders();
+    
+    if (todayOrders.length === 0) {
+      onShowSnackbar && onShowSnackbar('No orders found for today to export', 'error');
+      return;
+    }
+
+    try {
+      // Calculate totals
+      const totalSales = todayOrders.reduce((sum, order) => sum + order.total, 0);
+      const paidOrders = todayOrders.filter(order => order.status === 'paid');
+      const unpaidOrders = todayOrders.filter(order => order.status === 'unpaid' || order.status === 'pending');
+      const paidTotal = paidOrders.reduce((sum, order) => sum + order.total, 0);
+      const unpaidTotal = unpaidOrders.reduce((sum, order) => sum + order.total, 0);
+
+      // Prepare Excel data
+      const excelData = [];
+      
+      // Add summary rows
+      excelData.push(['SALES DATA EXPORT']);
+      excelData.push(['Date:', new Date().toLocaleDateString()]);
+      excelData.push(['Time:', new Date().toLocaleTimeString()]);
+      excelData.push([]);
+      excelData.push(['SUMMARY']);
+      excelData.push(['Total Orders:', todayOrders.length]);
+      excelData.push(['Paid Orders:', paidOrders.length, `${paidTotal} Ksh`]);
+      excelData.push(['Unpaid Orders:', unpaidOrders.length, `${unpaidTotal} Ksh`]);
+      excelData.push(['Total Sales:', `${totalSales} Ksh`]);
+      excelData.push([]);
+      excelData.push([]);
+      
+      // Add orders header
+      excelData.push(['Order Number', 'Waiter', 'Customer Name', 'Status', 'Total', 'Items']);
+      
+      // Add order rows
+      todayOrders.forEach(order => {
+        const itemsText = order.items.map(item => 
+          `${item.name} x${item.quantity}`
+        ).join(', ');
+        
+        excelData.push([
+          order.orderNumber,
+          order.waiter,
+          order.customerName || '',
+          order.status,
+          order.total,
+          itemsText
+        ]);
+      });
+
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(excelData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        {wch: 15}, // Order Number
+        {wch: 15}, // Waiter
+        {wch: 20}, // Customer Name
+        {wch: 10}, // Status
+        {wch: 10}, // Total
+        {wch: 50}, // Items
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Sales Data');
+
+      // Generate Excel file
+      const wbout = XLSX.write(wb, {type: 'base64', bookType: 'xlsx'});
+
+      // Create filename with date
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `Sales_Export_${dateStr}.xlsx`;
+      
+      // Use appropriate directory based on platform
+      let downloadPath;
+      if (Platform.OS === 'android') {
+        // For Android, use external storage Downloads folder
+        const downloadDir = RNFS.DownloadDirectoryPath || RNFS.ExternalStorageDirectoryPath + '/Download';
+        downloadPath = `${downloadDir}/${filename}`;
+      } else {
+        // For iOS, use Documents directory
+        downloadPath = `${RNFS.DocumentDirectoryPath}/${filename}`;
+      }
+
+      console.log('Export path:', downloadPath);
+      console.log('File size (base64):', wbout.length);
+
+      // Write file
+      await RNFS.writeFile(downloadPath, wbout, 'base64');
+      
+      // Verify file was written
+      const fileExists = await RNFS.exists(downloadPath);
+      console.log('File exists after write:', fileExists);
+      
+      if (!fileExists) {
+        throw new Error('File was not created successfully');
+      }
+
+      // Get file info
+      const fileInfo = await RNFS.stat(downloadPath);
+      console.log('File info:', fileInfo);
+
+      // Show success with snackbar
+      onShowSnackbar && onShowSnackbar(
+        `Sales data exported successfully (${Math.round(fileInfo.size / 1024)}KB)`,
+        'success'
+      );
+
+      // Optional: Show dialog with share option
+      setTimeout(() => {
+        Alert.alert(
+          'File Downloaded',
+          `File: ${filename}\nSize: ${Math.round(fileInfo.size / 1024)}KB\nLocation: ${downloadPath}`,
+          [
+            {text: 'OK'},
+            {text: 'Share', onPress: async () => {
+              try {
+                await Share.share({
+                  title: 'Export Sales Data',
+                  message: `Sales data for ${new Date().toLocaleDateString()}`,
+                  url: Platform.OS === 'android' ? `file://${downloadPath}` : downloadPath,
+                });
+              } catch (shareError) {
+                console.error('Share error:', shareError);
+              }
+            }}
+          ]
+        );
+      }, 500);
+
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Error', 'Failed to export sales data: ' + error.message);
+    }
+  };
+
+  const handleImportFromExcel = async () => {
+    try {
+      // Pick Excel file
+      const result = await DocumentPicker.pick({
+        type: [DocumentPicker.types.xlsx, DocumentPicker.types.xls],
+      });
+
+      // Show loading
+      Alert.alert('Processing', 'Reading Excel file...');
+
+      // Read file
+      const fileContent = await RNFS.readFile(result[0].uri, 'base64');
+      
+      // Parse Excel
+      const workbook = XLSX.read(fileContent, {type: 'base64'});
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      if (data.length === 0) {
+        Alert.alert('Error', 'The Excel file is empty');
+        return;
+      }
+
+      // Process imported data
+      const results = await excelImportService.processImportedData(data);
+
+      // Show results
+      let message = `Successfully imported: ${results.success} orders\n`;
+      if (results.failed > 0) {
+        message += `Failed: ${results.failed} orders\n\n`;
+        if (results.errors.length > 0) {
+          message += 'Errors:\n' + results.errors.slice(0, 5).join('\n');
+          if (results.errors.length > 5) {
+            message += `\n... and ${results.errors.length - 5} more errors`;
+          }
+        }
+      }
+
+      Alert.alert(
+        results.failed > 0 ? 'Import Completed with Errors' : 'Import Successful',
+        message,
+        [{text: 'OK'}]
+      );
+
+      // Reload sync stats after import
+      await loadSyncStats();
+
+    } catch (error) {
+      if (error.code !== 'DOCUMENT_PICKER_CANCELED') {
+        console.error('Import error:', error);
+        Alert.alert('Error', 'Failed to import file: ' + error.message);
+      }
+    }
+  };
+
+  const formatLastSync = () => {
+    if (!lastSyncTime) return 'Never synced';
+    
+    const now = new Date();
+    const diffMs = now - lastSyncTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
   const getFilteredOrders = () => {
     let filtered = orders;
+
+    // Filter by current date (only show today's orders)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    filtered = filtered.filter(order => {
+      const orderDate = new Date(order.timestamp);
+      return orderDate >= today && orderDate < tomorrow;
+    });
 
     // Filter by status
     if (activeFilter === 'paid') {
@@ -102,6 +377,59 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt}) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.mainScrollView} contentContainerStyle={styles.mainScrollContent}>
+        {/* Sync Status Section */}
+        <View style={styles.syncCard}>
+          <View style={styles.syncHeader}>
+            <View style={styles.syncInfo}>
+              <Icon name="cloud-sync" size={24} color={colors.primary} />
+              <View style={styles.syncTextContainer}>
+                <Text style={styles.syncTitle}>Sync Status</Text>
+                {syncStats && (
+                  <Text style={styles.syncSubtitle}>
+                    {syncStats.unsynced > 0 
+                      ? `${syncStats.unsynced} order${syncStats.unsynced !== 1 ? 's' : ''} pending sync`
+                      : 'All orders synced'}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.syncButton, syncing && styles.syncButtonDisabled]}
+              onPress={handleSync}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <>
+                  <Icon name="sync" size={18} color={colors.white} />
+                  <Text style={styles.syncButtonText}>Sync</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          {syncStats && (
+            <View style={styles.syncStatsRow}>
+              <View style={styles.syncStat}>
+                <Text style={styles.syncStatValue}>{syncStats.total}</Text>
+                <Text style={styles.syncStatLabel}>Total</Text>
+              </View>
+              <View style={styles.syncStat}>
+                <Text style={[styles.syncStatValue, {color: colors.success}]}>{syncStats.synced}</Text>
+                <Text style={styles.syncStatLabel}>Synced</Text>
+              </View>
+              <View style={styles.syncStat}>
+                <Text style={[styles.syncStatValue, {color: colors.warning}]}>{syncStats.unsynced}</Text>
+                <Text style={styles.syncStatLabel}>Pending</Text>
+              </View>
+              <View style={styles.syncStat}>
+                <Text style={styles.syncStatValue}>{formatLastSync()}</Text>
+                <Text style={styles.syncStatLabel}>Last Sync</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
         {/* Search and Filter Section */}
         <View style={styles.searchFilterCard}>
           {/* Search Field */}
@@ -142,6 +470,25 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt}) => {
               </TouchableOpacity>
             ))}
           </ScrollView>
+        </View>
+
+        {/* Export and Import Buttons */}
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.actionButtonLarge, styles.exportButton]}
+            onPress={handleExportSalesData}
+          >
+            <Icon name="file-download" size={20} color={colors.white} />
+            <Text style={styles.actionButtonLargeText}>Export Sales Data</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButtonLarge, styles.importButton]}
+            onPress={handleImportFromExcel}
+          >
+            <Icon name="file-upload" size={20} color={colors.white} />
+            <Text style={styles.actionButtonLargeText}>Import from Excel</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Orders List */}
@@ -224,10 +571,85 @@ const styles = StyleSheet.create({
   mainScrollContent: {
     paddingBottom: 16,
   },
-  searchFilterCard: {
+  syncCard: {
     backgroundColor: colors.white,
     marginHorizontal: 16,
     marginTop: 16,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  syncHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  syncInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  syncTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  syncTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  syncSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  syncButtonDisabled: {
+    opacity: 0.6,
+  },
+  syncButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  syncStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  syncStat: {
+    alignItems: 'center',
+  },
+  syncStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+  },
+  syncStatLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  searchFilterCard: {
+    backgroundColor: colors.white,
+    marginHorizontal: 16,
+    marginTop: 0,
     marginBottom: 16,
     padding: 16,
     borderRadius: 12,
@@ -274,6 +696,27 @@ const styles = StyleSheet.create({
   },
   activeFilterButtonText: {
     color: colors.white,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  exportButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,

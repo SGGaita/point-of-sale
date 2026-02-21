@@ -11,24 +11,10 @@ export async function GET(request, { params }) {
         *,
         order_items (
           id,
-          menu_item_id,
-          inventory_item_id,
           item_name,
           quantity,
-          unit,
-          unit_price,
-          subtotal,
-          tax_amount,
-          total_amount,
-          notes
-        ),
-        order_payments (
-          id,
-          payment_method,
-          amount,
-          reference_number,
-          payment_date,
-          notes
+          price,
+          total_price
         )
       `)
       .eq('id', id)

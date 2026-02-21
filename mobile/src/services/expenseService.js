@@ -64,17 +64,25 @@ export const expenseService = {
     let createdExpense;
     await database.write(async () => {
       createdExpense = await expensesCollection.create(expense => {
+        expense.templateId = expenseData.templateId || null;
         expense.category = expenseData.category;
         expense.amount = expenseData.amount;
+        expense.quantity = expenseData.quantity || null;
+        expense.unitCost = expenseData.unitCost || null;
         expense.description = expenseData.description || '';
         expense.timestamp = expenseData.timestamp || Date.now();
+        expense.isSynced = false;
+        expense.syncedAt = null;
       });
     });
     
     return {
       id: createdExpense.id,
+      templateId: createdExpense.templateId,
       category: createdExpense.category,
       amount: createdExpense.amount,
+      quantity: createdExpense.quantity,
+      unitCost: createdExpense.unitCost,
       description: createdExpense.description,
       timestamp: createdExpense.timestamp,
     };

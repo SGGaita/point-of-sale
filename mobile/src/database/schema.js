@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 4,
+  version: 6,
   tables: [
     tableSchema({
       name: 'menu_items',
@@ -10,6 +10,9 @@ export default appSchema({
         { name: 'price', type: 'number' },
         { name: 'category', type: 'string' },
         { name: 'is_available', type: 'boolean' },
+        { name: 'server_id', type: 'string', isOptional: true },
+        { name: 'is_synced', type: 'boolean' },
+        { name: 'synced_at', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -53,10 +56,29 @@ export default appSchema({
     tableSchema({
       name: 'expenses',
       columns: [
+        { name: 'template_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'category', type: 'string', isIndexed: true },
         { name: 'amount', type: 'number' },
+        { name: 'quantity', type: 'number', isOptional: true },
+        { name: 'unit_cost', type: 'number', isOptional: true },
         { name: 'description', type: 'string' },
         { name: 'timestamp', type: 'number' },
+        { name: 'is_synced', type: 'boolean' },
+        { name: 'synced_at', type: 'number', isOptional: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'expense_templates',
+      columns: [
+        { name: 'name', type: 'string' },
+        { name: 'category', type: 'string', isIndexed: true },
+        { name: 'unit', type: 'string' },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'sort_order', type: 'number' },
+        { name: 'is_synced', type: 'boolean' },
+        { name: 'synced_at', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

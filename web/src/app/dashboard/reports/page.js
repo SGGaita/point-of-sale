@@ -6,9 +6,6 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
-  Card,
-  CardContent,
   Table,
   TableBody,
   TableCell,
@@ -18,158 +15,63 @@ import {
   TextField,
   Button,
   CircularProgress,
-  Divider,
   Chip,
   Alert,
-  Tabs,
-  Tab,
 } from "@mui/material";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import InventoryIcon from "@mui/icons-material/Inventory";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import AssessmentIcon from "@mui/icons-material/Assessment";
 import DownloadIcon from "@mui/icons-material/Download";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import Sidebar from "@/components/dashboard/Sidebar";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const drawerWidth = 260;
+const COLORS = ['#2e7d32', '#1976d2', '#f57c00', '#d32f2f', '#7b1fa2', '#00897b', '#c62828', '#5e35b1'];
 
 export default function ReportsPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(0);
+  const [error, setError] = useState(null);
   
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
-  const [salesReport, setSalesReport] = useState(null);
-  const [deliveryReport, setDeliveryReport] = useState(null);
-  const [stockReport, setStockReport] = useState(null);
-  const [expenseReport, setExpenseReport] = useState(null);
-  const [profitabilityReport, setProfitabilityReport] = useState(null);
+  const [startDate, setStartDate] = useState(thirtyDaysAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+  
+  const [reportData, setReportData] = useState(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    
     const userData = localStorage.getItem("pos_user");
     if (!userData) {
       router.push("/login");
       return;
     }
     setUser(JSON.parse(userData));
-    fetchReports();
-  }, [router, mounted]);
+  }, [router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchReports();
+    }
+  }, [user]);
 
   const fetchReports = async () => {
     setLoading(true);
+    setError(null);
     try {
-      await Promise.all([
-        fetchSalesReport(),
-        fetchDeliveryReport(),
-        fetchStockReport(),
-        fetchExpenseReport(),
-        fetchProfitabilityReport(),
-      ]);
-    } catch (error) {
-      console.error("Error fetching reports:", error);
+      const response = await fetch(`/api/reports?startDate=${startDate}&endDate=${endDate}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch reports');
+      }
+      const data = await response.json();
+      setReportData(data);
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchSalesReport = async () => {
-    try {
-      const response = await fetch(`/api/reports/sales?startDate=${startDate}&endDate=${endDate}`);
-      const data = await response.json();
-      if (response.ok) {
-        setSalesReport(data);
-      }
-    } catch (error) {
-      console.error("Error fetching sales report:", error);
-      setSalesReport({
-        salesByItem: [],
-        salesByType: { DINE_IN: 0, TAKEAWAY: 0, DELIVERY: 0 },
-        totalSales: 0,
-      });
-    }
-  };
-
-  const fetchDeliveryReport = async () => {
-    try {
-      const response = await fetch(`/api/reports/delivery?startDate=${startDate}&endDate=${endDate}`);
-      const data = await response.json();
-      if (response.ok) {
-        setDeliveryReport(data);
-      }
-    } catch (error) {
-      console.error("Error fetching delivery report:", error);
-      setDeliveryReport({
-        totalDeliveries: 0,
-        salesByStaff: [],
-        totalDeliveryFees: 0,
-      });
-    }
-  };
-
-  const fetchStockReport = async () => {
-    try {
-      const response = await fetch(`/api/reports/stock?startDate=${startDate}&endDate=${endDate}`);
-      const data = await response.json();
-      if (response.ok) {
-        setStockReport(data);
-      }
-    } catch (error) {
-      console.error("Error fetching stock report:", error);
-      setStockReport({
-        items: [],
-        totalOpeningStock: 0,
-        totalStockUsed: 0,
-        totalClosingStock: 0,
-      });
-    }
-  };
-
-  const fetchExpenseReport = async () => {
-    try {
-      const response = await fetch(`/api/reports/expenses?startDate=${startDate}&endDate=${endDate}`);
-      const data = await response.json();
-      if (response.ok) {
-        setExpenseReport(data);
-      }
-    } catch (error) {
-      console.error("Error fetching expense report:", error);
-      setExpenseReport({
-        expenses: [],
-        totalExpenses: 0,
-      });
-    }
-  };
-
-  const fetchProfitabilityReport = async () => {
-    try {
-      const response = await fetch(`/api/reports/profitability?startDate=${startDate}&endDate=${endDate}`);
-      const data = await response.json();
-      if (response.ok) {
-        setProfitabilityReport(data);
-      }
-    } catch (error) {
-      console.error("Error fetching profitability report:", error);
-      setProfitabilityReport({
-        totalRevenue: 0,
-        totalExpenses: 0,
-        profit: 0,
-        profitMargin: 0,
-        dailySales: 0,
-        morningSupplies: 0,
-      });
     }
   };
 
@@ -179,22 +81,67 @@ export default function ReportsPage() {
   };
 
   const formatCurrency = (amount) => {
-    return `KSh ${parseFloat(amount || 0).toFixed(2)}`;
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   const handleExportReport = () => {
-    alert("Export functionality will be implemented with PDF generation");
+    if (!reportData) return;
+    
+    const csvContent = generateCSV();
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sales-report-${startDate}-to-${endDate}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
-  if (!mounted || !user) return null;
+  const generateCSV = () => {
+    if (!reportData) return '';
+    
+    let csv = 'Sales Report\n';
+    csv += `Date Range: ${startDate} to ${endDate}\n\n`;
+    csv += 'Summary\n';
+    csv += `Total Revenue,${reportData.summary.totalRevenue}\n`;
+    csv += `Total Orders,${reportData.summary.totalOrders}\n`;
+    csv += `Paid Orders,${reportData.summary.paidOrders}\n`;
+    csv += `Average Order Value,${reportData.summary.avgOrderValue}\n\n`;
+    csv += 'Sales by Item\n';
+    csv += 'Item Name,Quantity Sold,Unit Price,Total Sales\n';
+    reportData.salesByItem.forEach(item => {
+      csv += `${item.itemName},${item.quantitySold},${item.unitPrice},${item.totalSales}\n`;
+    });
+    return csv;
+  };
 
-  const reportTabs = [
-    { label: "Sales Report", icon: <ReceiptIcon /> },
-    { label: "Delivery Report", icon: <LocalShippingIcon /> },
-    { label: "Stock Report", icon: <InventoryIcon /> },
-    { label: "Expense Report", icon: <AttachMoneyIcon /> },
-    { label: "Profitability", icon: <AssessmentIcon /> },
-  ];
+  if (!user) return null;
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", minHeight: "100vh" }}>
+        <Sidebar user={user} onLogout={handleLogout} />
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: { md: `calc(100% - ${drawerWidth}px)` },
+            bgcolor: "#fafafa",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
@@ -209,18 +156,21 @@ export default function ReportsPage() {
           bgcolor: "#fafafa",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1600px", width: "100%" }}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
-              Reports & Analytics
+        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1600px", width: "100%" }}>
+          {/* Header */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h4" component="h1" gutterBottom fontWeight={700}>
+              Sales Reports & Analytics
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              View detailed business reports and insights
+              Comprehensive business insights and performance metrics
             </Typography>
           </Box>
 
-          <Paper elevation={0} sx={{ p: 3, mb: 3, border: "1px solid", borderColor: "divider" }}>
+          {/* Date Range Filter */}
+          <Paper elevation={0} sx={{ p: 2.5, mb: 3, border: 1, borderColor: "divider", borderRadius: 2 }}>
             <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+              <CalendarTodayIcon sx={{ color: "text.secondary" }} />
               <TextField
                 label="Start Date"
                 type="date"
@@ -228,6 +178,7 @@ export default function ReportsPage() {
                 onChange={(e) => setStartDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 size="small"
+                sx={{ minWidth: 180 }}
               />
               <TextField
                 label="End Date"
@@ -236,112 +187,297 @@ export default function ReportsPage() {
                 onChange={(e) => setEndDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 size="small"
+                sx={{ minWidth: 180 }}
               />
-              <Button variant="contained" onClick={fetchReports}>
-                Generate Reports
+              <Button 
+                variant="contained" 
+                onClick={fetchReports}
+                sx={{
+                  bgcolor: "#000",
+                  "&:hover": { bgcolor: "#1a1a1a" }
+                }}
+              >
+                Generate Report
               </Button>
               <Button
                 variant="outlined"
                 startIcon={<DownloadIcon />}
                 onClick={handleExportReport}
+                disabled={!reportData}
+                sx={{
+                  borderColor: "#000",
+                  color: "#000",
+                  "&:hover": { borderColor: "#1a1a1a", bgcolor: "rgba(0,0,0,0.04)" }
+                }}
               >
-                Export
+                Export CSV
               </Button>
             </Box>
           </Paper>
 
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="scrollable" scrollButtons="auto">
-              {reportTabs.map((tab, index) => (
-                <Tab key={index} label={tab.label} icon={tab.icon} iconPosition="start" />
-              ))}
-            </Tabs>
-          </Box>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
+          {reportData && (
             <>
-              {activeTab === 0 && salesReport && (
-                <Box>
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Sales
-                          </Typography>
-                          <Typography variant="h4" fontWeight={700}>
-                            {formatCurrency(salesReport.totalSales)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Dine-In Sales
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(salesReport.salesByType?.DINE_IN || 0)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Takeaway Sales
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(salesReport.salesByType?.TAKEAWAY || 0)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Delivery Sales
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(salesReport.salesByType?.DELIVERY || 0)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
+              {/* Summary Cards */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+                <Box sx={{ flex: "1 1 180px", minWidth: "160px" }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      border: 1,
+                      borderColor: "success.main",
+                      borderRadius: 2,
+                      height: "100%",
+                      bgcolor: "#f1f8f4",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        borderColor: "success.dark",
+                        boxShadow: "0 2px 8px rgba(46,125,50,0.15)",
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                        Total Revenue
+                      </Typography>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "success.main" }} />
+                    </Box>
+                    <Typography variant="h4" fontWeight={700} color="success.main">
+                      {formatCurrency(reportData.summary.totalRevenue)}
+                    </Typography>
+                  </Paper>
+                </Box>
 
-                  <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                    <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-                      <Typography variant="h6" fontWeight={600}>
+                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2.5,
+                      border: 1,
+                      borderColor: "primary.main",
+                      borderRadius: 2,
+                      height: "100%",
+                      bgcolor: "#e3f2fd",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        borderColor: "primary.dark",
+                        boxShadow: "0 2px 8px rgba(25,118,210,0.15)",
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                        Total Orders
+                      </Typography>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "primary.main" }} />
+                    </Box>
+                    <Typography variant="h4" fontWeight={700} color="primary.main">
+                      {reportData.summary.totalOrders}
+                    </Typography>
+                  </Paper>
+                </Box>
+
+                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2.5,
+                      border: 1,
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      height: "100%",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        borderColor: "#000",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                        Avg Order Value
+                      </Typography>
+                      <TrendingUpIcon fontSize="small" sx={{ color: "success.main" }} />
+                    </Box>
+                    <Typography variant="h4" fontWeight={700}>
+                      {formatCurrency(reportData.summary.avgOrderValue)}
+                    </Typography>
+                  </Paper>
+                </Box>
+
+                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2.5,
+                      border: 1,
+                      borderColor: "error.main",
+                      borderRadius: 2,
+                      height: "100%",
+                      bgcolor: "#fef5f5",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        borderColor: "error.dark",
+                        boxShadow: "0 2px 8px rgba(211,47,47,0.15)",
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                        Unpaid Amount
+                      </Typography>
+                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "error.main" }} />
+                    </Box>
+                    <Typography variant="h4" fontWeight={700} color="error.main">
+                      {formatCurrency(reportData.statusBreakdown.unpaidAmount)}
+                    </Typography>
+                  </Paper>
+                </Box>
+              </Box>
+
+              {/* Charts Section */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+                {/* Daily Sales Chart */}
+                <Box sx={{ flex: "1 1 450px", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ p: 2.5, border: 1, borderColor: "divider", borderRadius: 2, height: "100%" }}>
+                    <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+                      Daily Revenue Trend
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={reportData.dailySales}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={80} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip
+                          formatter={(value) => formatCurrency(value)}
+                          contentStyle={{ borderRadius: 8, border: "1px solid #e0e0e0", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+                        />
+                        <Line type="monotone" dataKey="revenue" stroke="#2e7d32" strokeWidth={2} dot={{ r: 4, fill: "#2e7d32" }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Box>
+
+                {/* Daily Orders Chart */}
+                <Box sx={{ flex: "1 1 450px", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ p: 2.5, border: 1, borderColor: "divider", borderRadius: 2, height: "100%" }}>
+                    <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+                      Daily Orders Volume
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={reportData.dailySales}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={80} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 8, border: "1px solid #e0e0e0", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+                        />
+                        <Bar dataKey="orders" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Box>
+              </Box>
+
+              {/* Top Items Chart */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+                <Box sx={{ flex: "1 1 450px", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ p: 2.5, border: 1, borderColor: "divider", borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+                      Top 8 Items by Revenue
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={reportData.salesByItem.slice(0, 8)} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" tick={{ fontSize: 12 }} />
+                        <YAxis dataKey="itemName" type="category" width={120} tick={{ fontSize: 11 }} />
+                        <Tooltip
+                          formatter={(value) => formatCurrency(value)}
+                          contentStyle={{ borderRadius: 8, border: "1px solid #e0e0e0" }}
+                        />
+                        <Bar dataKey="totalSales" fill="#f57c00" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Box>
+
+                <Box sx={{ flex: "1 1 350px", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ p: 2.5, border: 1, borderColor: "divider", borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
+                      Sales by Waiter
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={reportData.salesByWaiter.slice(0, 8)}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={(entry) => `${entry.waiter}: ${formatCurrency(entry.totalSales)}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="totalSales"
+                        >
+                          {reportData.salesByWaiter.slice(0, 8).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Paper>
+                </Box>
+              </Box>
+
+              {/* Tables Section */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+                {/* Sales by Item Table */}
+                <Box sx={{ flex: "1 1 100%", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                    <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
+                      <Typography variant="subtitle1" fontWeight={700}>
                         Sales by Item
                       </Typography>
                     </Box>
-                    <TableContainer>
-                      <Table>
-                        <TableHead sx={{ bgcolor: "#f5f5f5" }}>
-                          <TableRow>
-                            <TableCell><strong>Item Name</strong></TableCell>
-                            <TableCell align="right"><strong>Quantity Sold</strong></TableCell>
-                            <TableCell align="right"><strong>Unit Price</strong></TableCell>
-                            <TableCell align="right"><strong>Total Sales</strong></TableCell>
+                    <TableContainer sx={{ maxHeight: 350 }}>
+                      <Table stickyHeader>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                            <TableCell sx={{ fontWeight: 700 }}>Item Name</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Quantity Sold</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Unit Price</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Total Sales</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {salesReport.salesByItem?.length > 0 ? (
-                            salesReport.salesByItem.map((item, index) => (
-                              <TableRow key={index} hover>
-                                <TableCell>{item.itemName}</TableCell>
-                                <TableCell align="right">{item.quantitySold}</TableCell>
-                                <TableCell align="right">{formatCurrency(item.unitPrice)}</TableCell>
+                          {reportData.salesByItem.length > 0 ? (
+                            reportData.salesByItem.map((item, index) => (
+                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
+                                <TableCell>
+                                  <Typography variant="body2" fontWeight={500}>
+                                    {item.itemName}
+                                  </Typography>
+                                </TableCell>
                                 <TableCell align="right">
-                                  <Typography fontWeight={600}>
+                                  <Chip 
+                                    label={item.quantitySold} 
+                                    size="small" 
+                                    sx={{ fontWeight: 600, bgcolor: "#e3f2fd", color: "#1976d2" }} 
+                                  />
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body2" color="text.secondary">
+                                    {formatCurrency(item.unitPrice)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body2" fontWeight={700} color="success.main">
                                     {formatCurrency(item.totalSales)}
                                   </Typography>
                                 </TableCell>
@@ -359,251 +495,53 @@ export default function ReportsPage() {
                     </TableContainer>
                   </Paper>
                 </Box>
-              )}
+              </Box>
 
-              {activeTab === 1 && deliveryReport && (
-                <Box>
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} md={4}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Deliveries
-                          </Typography>
-                          <Typography variant="h4" fontWeight={700}>
-                            {deliveryReport.totalDeliveries || 0}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Delivery Fees Collected
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(deliveryReport.totalDeliveryFees)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Average Delivery Value
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(
-                              deliveryReport.totalDeliveries > 0
-                                ? deliveryReport.totalDeliveryFees / deliveryReport.totalDeliveries
-                                : 0
-                            )}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
-
-                  <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                    <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        Sales by Staff Member
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                {/* Sales by Waiter Table */}
+                <Box sx={{ flex: "1 1 500px", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                    <Box sx={{ p: 2.5, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
+                      <Typography variant="h6" fontWeight={700}>
+                        Performance by Waiter
                       </Typography>
                     </Box>
                     <TableContainer>
                       <Table>
-                        <TableHead sx={{ bgcolor: "#f5f5f5" }}>
-                          <TableRow>
-                            <TableCell><strong>Staff Name</strong></TableCell>
-                            <TableCell align="right"><strong>Deliveries Handled</strong></TableCell>
-                            <TableCell align="right"><strong>Total Sales</strong></TableCell>
-                            <TableCell align="right"><strong>Delivery Fees</strong></TableCell>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                            <TableCell sx={{ fontWeight: 700 }}>Waiter</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Orders</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Total Sales</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {deliveryReport.salesByStaff?.length > 0 ? (
-                            deliveryReport.salesByStaff.map((staff, index) => (
-                              <TableRow key={index} hover>
-                                <TableCell>{staff.staffName}</TableCell>
-                                <TableCell align="right">{staff.deliveryCount}</TableCell>
-                                <TableCell align="right">{formatCurrency(staff.totalSales)}</TableCell>
-                                <TableCell align="right">{formatCurrency(staff.deliveryFees)}</TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                                <Typography color="text.secondary">No delivery data available</Typography>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Paper>
-                </Box>
-              )}
-
-              {activeTab === 2 && stockReport && (
-                <Box>
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} md={4}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Opening Stock Value
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(stockReport.totalOpeningStock)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Stock Used Value
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(stockReport.totalStockUsed)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Closing Stock Value
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {formatCurrency(stockReport.totalClosingStock)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
-
-                  <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                    <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        Stock Movement by Item
-                      </Typography>
-                    </Box>
-                    <TableContainer>
-                      <Table>
-                        <TableHead sx={{ bgcolor: "#f5f5f5" }}>
-                          <TableRow>
-                            <TableCell><strong>Item Name</strong></TableCell>
-                            <TableCell align="right"><strong>Opening Stock</strong></TableCell>
-                            <TableCell align="right"><strong>Stock Used</strong></TableCell>
-                            <TableCell align="right"><strong>Closing Stock</strong></TableCell>
-                            <TableCell align="right"><strong>Unit</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {stockReport.items?.length > 0 ? (
-                            stockReport.items.map((item, index) => (
-                              <TableRow key={index} hover>
-                                <TableCell>{item.itemName}</TableCell>
-                                <TableCell align="right">{item.openingStock}</TableCell>
-                                <TableCell align="right">{item.stockUsed}</TableCell>
-                                <TableCell align="right">
-                                  <Chip
-                                    label={item.closingStock}
-                                    size="small"
-                                    color={item.closingStock < 10 ? "error" : "default"}
-                                  />
-                                </TableCell>
-                                <TableCell align="right">{item.unit}</TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                                <Typography color="text.secondary">No stock data available</Typography>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Paper>
-                </Box>
-              )}
-
-              {activeTab === 3 && expenseReport && (
-                <Box>
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} md={6}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Expenses
-                          </Typography>
-                          <Typography variant="h4" fontWeight={700} color="error.main">
-                            {formatCurrency(expenseReport.totalExpenses)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Number of Expenses
-                          </Typography>
-                          <Typography variant="h4" fontWeight={700}>
-                            {expenseReport.expenses?.length || 0}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
-
-                  <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                    <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        Daily Expenses
-                      </Typography>
-                    </Box>
-                    <TableContainer>
-                      <Table>
-                        <TableHead sx={{ bgcolor: "#f5f5f5" }}>
-                          <TableRow>
-                            <TableCell><strong>Date</strong></TableCell>
-                            <TableCell><strong>Category</strong></TableCell>
-                            <TableCell><strong>Description</strong></TableCell>
-                            <TableCell align="right"><strong>Amount</strong></TableCell>
-                            <TableCell><strong>Recorded By</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {expenseReport.expenses?.length > 0 ? (
-                            expenseReport.expenses.map((expense, index) => (
-                              <TableRow key={index} hover>
+                          {reportData.salesByWaiter.length > 0 ? (
+                            reportData.salesByWaiter.map((waiter, index) => (
+                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
                                 <TableCell>
-                                  {new Date(expense.expenseDate).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell>
-                                  <Chip label={expense.category} size="small" />
-                                </TableCell>
-                                <TableCell>{expense.description}</TableCell>
-                                <TableCell align="right">
-                                  <Typography fontWeight={600} color="error.main">
-                                    {formatCurrency(expense.amount)}
+                                  <Typography variant="body2" fontWeight={600}>
+                                    {waiter.waiter}
                                   </Typography>
                                 </TableCell>
-                                <TableCell>{expense.recordedBy}</TableCell>
+                                <TableCell align="right">
+                                  <Chip 
+                                    label={waiter.orderCount} 
+                                    size="small" 
+                                    sx={{ fontWeight: 600 }} 
+                                  />
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body2" fontWeight={700} color="success.main">
+                                    {formatCurrency(waiter.totalSales)}
+                                  </Typography>
+                                </TableCell>
                               </TableRow>
                             ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                                <Typography color="text.secondary">No expenses recorded</Typography>
+                              <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                                <Typography color="text.secondary">No waiter data available</Typography>
                               </TableCell>
                             </TableRow>
                           )}
@@ -612,166 +550,60 @@ export default function ReportsPage() {
                     </TableContainer>
                   </Paper>
                 </Box>
-              )}
 
-              {activeTab === 4 && profitabilityReport && (
-                <Box>
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Revenue
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600} color="success.main">
-                            {formatCurrency(profitabilityReport.totalRevenue)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Total Expenses
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600} color="error.main">
-                            {formatCurrency(profitabilityReport.totalExpenses)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              Net Profit/Loss
-                            </Typography>
-                            {profitabilityReport.profit >= 0 ? (
-                              <TrendingUpIcon color="success" fontSize="small" />
-                            ) : (
-                              <TrendingDownIcon color="error" fontSize="small" />
-                            )}
-                          </Box>
-                          <Typography
-                            variant="h5"
-                            fontWeight={700}
-                            color={profitabilityReport.profit >= 0 ? "success.main" : "error.main"}
-                          >
-                            {formatCurrency(profitabilityReport.profit)}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                        <CardContent>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Profit Margin
-                          </Typography>
-                          <Typography variant="h5" fontWeight={600}>
-                            {profitabilityReport.profitMargin?.toFixed(2) || 0}%
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
-
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <Paper elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "divider" }}>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
-                          Daily Sales vs Morning Supplies
-                        </Typography>
-                        <Divider sx={{ my: 2 }} />
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Daily Sales
-                            </Typography>
-                            <Typography variant="h5" fontWeight={600}>
-                              {formatCurrency(profitabilityReport.dailySales)}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Morning Supplies Cost
-                            </Typography>
-                            <Typography variant="h5" fontWeight={600}>
-                              {formatCurrency(profitabilityReport.morningSupplies)}
-                            </Typography>
-                          </Box>
-                          <Divider />
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Difference
-                            </Typography>
-                            <Typography
-                              variant="h5"
-                              fontWeight={700}
-                              color={
-                                profitabilityReport.dailySales - profitabilityReport.morningSupplies >= 0
-                                  ? "success.main"
-                                  : "error.main"
-                              }
-                            >
-                              {formatCurrency(
-                                profitabilityReport.dailySales - profitabilityReport.morningSupplies
-                              )}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Paper elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "divider" }}>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
-                          Performance Summary
-                        </Typography>
-                        <Divider sx={{ my: 2 }} />
-                        {profitabilityReport.profit >= 0 ? (
-                          <Alert severity="success" sx={{ mb: 2 }}>
-                            <Typography variant="body2" fontWeight={600}>
-                              Business is profitable!
-                            </Typography>
-                            <Typography variant="caption">
-                              You're generating positive returns with a {profitabilityReport.profitMargin?.toFixed(2)}% profit margin.
-                            </Typography>
-                          </Alert>
-                        ) : (
-                          <Alert severity="error" sx={{ mb: 2 }}>
-                            <Typography variant="body2" fontWeight={600}>
-                              Business is operating at a loss
-                            </Typography>
-                            <Typography variant="caption">
-                              Review expenses and pricing strategy to improve profitability.
-                            </Typography>
-                          </Alert>
-                        )}
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography variant="body2">Revenue to Expense Ratio:</Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {profitabilityReport.totalExpenses > 0
-                                ? (profitabilityReport.totalRevenue / profitabilityReport.totalExpenses).toFixed(2)
-                                : "N/A"}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography variant="body2">Break-even Status:</Typography>
-                            <Chip
-                              label={profitabilityReport.profit >= 0 ? "Above Break-even" : "Below Break-even"}
-                              size="small"
-                              color={profitabilityReport.profit >= 0 ? "success" : "error"}
-                            />
-                          </Box>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  </Grid>
+                {/* Top Customers Table */}
+                <Box sx={{ flex: "1 1 500px", minWidth: "300px" }}>
+                  <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                    <Box sx={{ p: 2.5, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
+                      <Typography variant="h6" fontWeight={700}>
+                        Top Customers
+                      </Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                            <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Orders</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Total Spent</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {reportData.topCustomers.length > 0 ? (
+                            reportData.topCustomers.map((customer, index) => (
+                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
+                                <TableCell>
+                                  <Typography variant="body2" fontWeight={600}>
+                                    {customer.customerName}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Chip 
+                                    label={customer.orderCount} 
+                                    size="small" 
+                                    sx={{ fontWeight: 600 }} 
+                                  />
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body2" fontWeight={700} color="success.main">
+                                    {formatCurrency(customer.totalSpent)}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                                <Typography color="text.secondary">No customer data available</Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
                 </Box>
-              )}
+              </Box>
             </>
           )}
         </Box>

@@ -5,7 +5,7 @@ import Header from '../components/Header';
 import MenuView from '../components/MenuView';
 import OrdersView from '../components/OrdersView';
 import WaitersView from '../components/WaitersView';
-import ExpensesView from '../components/ExpensesView';
+import ExpensesViewNew from '../components/ExpensesViewNew';
 import SummaryView from '../components/SummaryView';
 import Snackbar from '../components/Snackbar';
 import ReceiptModal from '../components/ReceiptModal';
@@ -479,6 +479,14 @@ const HomeScreen = () => {
     });
   };
 
+  const showSnackbar = (message, type = 'success') => {
+    setSnackbar({
+      visible: true,
+      message: message,
+      type: type,
+    });
+  };
+
   const hideSnackbar = () => {
     setSnackbar({
       ...snackbar,
@@ -499,7 +507,7 @@ const HomeScreen = () => {
       case 'waiters':
         return <WaitersView waiters={waiters} orders={orders} onAddWaiter={handleAddWaiter} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} onUpdateCustomerName={handleUpdateCustomerName} />;
       case 'expenses':
-        return <ExpensesView expenses={expenses} onAddExpense={handleAddExpense} onUpdateExpense={handleUpdateExpense} onDeleteExpense={handleDeleteExpense} />;
+        return <ExpensesViewNew expenses={expenses} onAddExpense={handleAddExpense} onUpdateExpense={handleUpdateExpense} onDeleteExpense={handleDeleteExpense} onShowSnackbar={showSnackbar} />;
       case 'summary':
         return <SummaryView orders={orders} expenses={expenses} onMarkPaid={handleMarkPaid} />;
       default:

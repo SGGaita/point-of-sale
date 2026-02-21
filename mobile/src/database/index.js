@@ -8,6 +8,7 @@ import Order from './models/Order';
 import OrderItem from './models/OrderItem';
 import Waiter from './models/Waiter';
 import Expense from './models/Expense';
+import ExpenseTemplate from './models/ExpenseTemplate';
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -20,5 +21,5 @@ const adapter = new SQLiteAdapter({
 
 export const database = new Database({
   adapter,
-  modelClasses: [MenuItem, Order, OrderItem, Waiter, Expense],
+  modelClasses: [MenuItem, Order, OrderItem, Waiter, Expense, ExpenseTemplate],
 });

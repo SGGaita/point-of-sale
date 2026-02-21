@@ -122,6 +122,8 @@ export const orderService = {
     await database.write(async () => {
       await order.update(o => {
         o.status = newStatus;
+        o.isSynced = false; // Mark as unsynced so it will be synced to backend
+        o.syncedAt = null;
       });
     });
     
