@@ -47,8 +47,12 @@ END $$;
 -- 2. CREATE CORE TABLES
 -- =====================================================
 
+-- Drop existing users and login_history tables if they exist (to recreate with correct schema)
+DROP TABLE IF EXISTS login_history CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- Users table (Application users with authentication)
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
   id TEXT PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
@@ -290,7 +294,7 @@ CREATE INDEX IF NOT EXISTS idx_settings_category ON system_settings(category);
 -- Users and Authentication
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users("isActive");
 CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_history_time ON login_history(login_time);
 
