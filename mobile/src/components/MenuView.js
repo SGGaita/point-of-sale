@@ -7,6 +7,7 @@ import {menuSyncService} from '../services/menuSyncService';
 import {waiterService} from '../services/waiterService';
 import {database} from '../database';
 import {Q} from '@nozbe/watermelondb';
+import {networkUtils} from '../utils/networkUtils';
 
 const MenuView = ({onCreateOrder, onError}) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +46,25 @@ const MenuView = ({onCreateOrder, onError}) => {
     loadSyncStats();
     // Auto-sync on app load
     handleSync();
+
+    // Subscribe to network changes to sync when internet becomes available
+    const unsubscribe = networkUtils.subscribeToNetworkChanges(async (isConnected) => {
+      if (isConnected) {
+        console.log('Internet connection restored. Checking for unsynced items...');
+        const stats = await menuSyncService.getSyncStats();
+        if (stats.unsynced > 0) {
+          console.log(`Found ${stats.unsynced} unsynced items. Triggering sync...`);
+          handleSync(true);
+        }
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const loadMenuItems = async () => {
@@ -105,6 +125,15 @@ const MenuView = ({onCreateOrder, onError}) => {
   };
 
   const handleSync = async (silent = false) => {
+    // Check internet connection before attempting sync
+    const isConnected = await networkUtils.isConnected();
+    if (!isConnected) {
+      if (!silent) {
+        showSnackbar('No internet connection. Changes will sync when online.', 'info');
+      }
+      return;
+    }
+
     setSyncing(true);
     try {
       const result = await menuSyncService.syncMenuItems();
