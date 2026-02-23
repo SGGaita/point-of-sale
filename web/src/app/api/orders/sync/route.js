@@ -20,7 +20,7 @@ export async function POST(request) {
       try {
         const { orderNumber, waiter, customerName, total, status, timestamp, orderItems } = orderData;
 
-        if (!orderNumber || !waiter || !total || !status || !timestamp) {
+        if (!orderNumber || !total || !status || !timestamp) {
           errors.push({
             orderNumber: orderNumber || 'unknown',
             error: 'Missing required fields'
@@ -40,12 +40,11 @@ export async function POST(request) {
           const { error: updateError } = await supabase
             .from('orders')
             .update({
-              waiter,
+              created_by: waiter || null,
               customer_name: customerName || null,
-              total: parseFloat(total),
-              status: status.toUpperCase(),
-              timestamp: new Date(timestamp).toISOString(),
-              synced_at: new Date().toISOString(),
+              total_amount: parseFloat(total),
+              payment_status: status.toUpperCase(),
+              order_date: new Date(timestamp).toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq('order_number', orderNumber);
@@ -88,12 +87,11 @@ export async function POST(request) {
             .insert({
               id: orderId,
               order_number: orderNumber,
-              waiter,
+              created_by: waiter || null,
               customer_name: customerName || null,
-              total: parseFloat(total),
-              status: status.toUpperCase(),
-              timestamp: new Date(timestamp).toISOString(),
-              synced_at: new Date().toISOString(),
+              total_amount: parseFloat(total),
+              payment_status: status.toUpperCase(),
+              order_date: new Date(timestamp).toISOString(),
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             });
@@ -165,23 +163,23 @@ export async function GET(request) {
           id,
           item_name,
           quantity,
-          price,
-          total_price
+          unit_price,
+          total_amount
         )
       `, { count: 'exact' })
-      .order('timestamp', { ascending: false })
+      .order('order_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (status) {
-      query = query.eq('status', status.toUpperCase());
+      query = query.eq('payment_status', status.toUpperCase());
     }
 
     if (startDate) {
-      query = query.gte('timestamp', startDate);
+      query = query.gte('order_date', startDate);
     }
 
     if (endDate) {
-      query = query.lte('timestamp', endDate);
+      query = query.lte('order_date', endDate);
     }
 
     const { data: orders, error, count } = await query;

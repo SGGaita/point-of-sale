@@ -23,23 +23,23 @@ export async function GET(request) {
           *
         )
       `, { count: 'exact' })
-      .order('timestamp', { ascending: false })
+      .order('order_date', { ascending: false })
       .range(from, to);
 
     if (status && status !== 'ALL') {
-      query = query.eq('status', status.toUpperCase());
+      query = query.eq('order_status', status.toUpperCase());
     }
 
     if (waiter) {
-      query = query.ilike('waiter', `%${waiter}%`);
+      query = query.ilike('created_by', `%${waiter}%`);
     }
 
     if (startDate) {
-      query = query.gte('timestamp', startDate);
+      query = query.gte('order_date', startDate);
     }
 
     if (endDate) {
-      query = query.lte('timestamp', endDate);
+      query = query.lte('order_date', endDate);
     }
 
     const { data: orders, error, count } = await query;
@@ -49,21 +49,21 @@ export async function GET(request) {
     // Get status counts
     const { data: allOrders } = await supabase
       .from('orders')
-      .select('status, total');
+      .select('payment_status, total_amount');
 
     const statusCounts = {
       total: count || 0,
-      paid: allOrders?.filter(o => o.status === 'PAID').length || 0,
-      unpaid: allOrders?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING').length || 0,
+      paid: allOrders?.filter(o => o.payment_status === 'PAID').length || 0,
+      unpaid: allOrders?.filter(o => o.payment_status === 'UNPAID' || o.payment_status === 'PARTIAL').length || 0,
     };
 
     const totalRevenue = allOrders
-      ?.filter(o => o.status === 'PAID')
-      .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0;
+      ?.filter(o => o.payment_status === 'PAID')
+      .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0) || 0;
 
     const unpaidAmount = allOrders
-      ?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING')
-      .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0;
+      ?.filter(o => o.payment_status === 'UNPAID' || o.payment_status === 'PARTIAL')
+      .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0) || 0;
 
     // Transform order_items to match expected format
     const transformedOrders = orders?.map(order => ({
@@ -124,7 +124,7 @@ export async function PATCH(request) {
     const { data: updatedOrder, error } = await supabase
       .from('orders')
       .update({
-        status: status.toUpperCase(),
+        payment_status: status.toUpperCase(),
         updated_at: new Date().toISOString()
       })
       .eq('order_number', orderNumber)
