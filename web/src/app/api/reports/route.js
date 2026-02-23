@@ -23,8 +23,8 @@ export async function GET(request) {
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select('*')
-      .gte('timestamp', start.toISOString())
-      .lte('timestamp', end.toISOString());
+      .gte('order_date', start.toISOString())
+      .lte('order_date', end.toISOString());
 
     if (ordersError) throw ordersError;
 
@@ -36,11 +36,11 @@ export async function GET(request) {
     if (itemsError) throw itemsError;
 
     // Calculate sales metrics
-    const paidOrders = orders?.filter(o => o.status === 'PAID') || [];
-    const totalRevenue = paidOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+    const paidOrders = orders?.filter(o => o.payment_status === 'PAID') || [];
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
     const totalOrders = orders?.length || 0;
     const paidOrdersCount = paidOrders.length;
-    const unpaidOrdersCount = orders?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING').length || 0;
+    const unpaidOrdersCount = orders?.filter(o => o.payment_status === 'UNPAID' || o.payment_status === 'PARTIAL').length || 0;
 
     // Sales by item
     const itemSales = {};
@@ -62,7 +62,7 @@ export async function GET(request) {
     // Sales by waiter
     const waiterSales = {};
     paidOrders.forEach(order => {
-      const waiter = order.waiter || 'Unknown';
+      const waiter = order.created_by || 'Unknown';
       if (!waiterSales[waiter]) {
         waiterSales[waiter] = {
           waiter,
@@ -71,7 +71,7 @@ export async function GET(request) {
         };
       }
       waiterSales[waiter].orderCount += 1;
-      waiterSales[waiter].totalSales += parseFloat(order.total || 0);
+      waiterSales[waiter].totalSales += parseFloat(order.total_amount || 0);
     });
 
     const salesByWaiter = Object.values(waiterSales).sort((a, b) => b.totalSales - a.totalSales);
@@ -79,7 +79,7 @@ export async function GET(request) {
     // Daily breakdown
     const dailyBreakdown = {};
     paidOrders.forEach(order => {
-      const date = new Date(order.timestamp).toLocaleDateString('en-US', { 
+      const date = new Date(order.order_date).toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric',
         year: 'numeric'
@@ -92,7 +92,7 @@ export async function GET(request) {
         };
       }
       dailyBreakdown[date].orders += 1;
-      dailyBreakdown[date].revenue += parseFloat(order.total || 0);
+      dailyBreakdown[date].revenue += parseFloat(order.total_amount || 0);
     });
 
     const dailySales = Object.values(dailyBreakdown).sort((a, b) => 
@@ -104,8 +104,8 @@ export async function GET(request) {
       paid: paidOrdersCount,
       unpaid: unpaidOrdersCount,
       paidRevenue: totalRevenue,
-      unpaidAmount: orders?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING')
-        .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0
+      unpaidAmount: orders?.filter(o => o.payment_status === 'UNPAID' || o.payment_status === 'PARTIAL')
+        .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0) || 0
     };
 
     // Top customers
@@ -120,7 +120,7 @@ export async function GET(request) {
         };
       }
       customerSales[customer].orderCount += 1;
-      customerSales[customer].totalSpent += parseFloat(order.total || 0);
+      customerSales[customer].totalSpent += parseFloat(order.total_amount || 0);
     });
 
     const topCustomers = Object.values(customerSales)

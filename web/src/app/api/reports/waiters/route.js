@@ -35,10 +35,10 @@ export async function GET(request) {
     let query = supabase
       .from('orders')
       .select('*')
-      .gte('timestamp', startDate.toISOString());
+      .gte('order_date', startDate.toISOString());
 
     if (waiter) {
-      query = query.eq('waiter', waiter);
+      query = query.eq('created_by', waiter);
     }
 
     const { data: orders, error: ordersError } = await query;
@@ -47,16 +47,16 @@ export async function GET(request) {
     // Get all unique waiters
     const { data: allOrders } = await supabase
       .from('orders')
-      .select('waiter')
-      .gte('timestamp', startDate.toISOString());
+      .select('created_by')
+      .gte('order_date', startDate.toISOString());
 
-    const uniqueWaiters = [...new Set(allOrders?.map(o => o.waiter).filter(Boolean))];
+    const uniqueWaiters = [...new Set(allOrders?.map(o => o.created_by).filter(Boolean))];
 
     // Calculate waiter performance
     const waiterPerformance = {};
     
     orders?.forEach(order => {
-      const waiterName = order.waiter || 'Unknown';
+      const waiterName = order.created_by || 'Unknown';
       if (!waiterPerformance[waiterName]) {
         waiterPerformance[waiterName] = {
           waiter: waiterName,
@@ -72,13 +72,13 @@ export async function GET(request) {
 
       waiterPerformance[waiterName].totalOrders += 1;
       
-      if (order.status === 'PAID') {
+      if (order.payment_status === 'PAID') {
         waiterPerformance[waiterName].paidOrders += 1;
-        waiterPerformance[waiterName].paidRevenue += parseFloat(order.total || 0);
-        waiterPerformance[waiterName].totalRevenue += parseFloat(order.total || 0);
-      } else if (order.status === 'UNPAID' || order.status === 'PENDING') {
+        waiterPerformance[waiterName].paidRevenue += parseFloat(order.total_amount || 0);
+        waiterPerformance[waiterName].totalRevenue += parseFloat(order.total_amount || 0);
+      } else if (order.payment_status === 'UNPAID' || order.payment_status === 'PARTIAL') {
         waiterPerformance[waiterName].unpaidOrders += 1;
-        waiterPerformance[waiterName].unpaidAmount += parseFloat(order.total || 0);
+        waiterPerformance[waiterName].unpaidAmount += parseFloat(order.total_amount || 0);
       }
     });
 
@@ -94,7 +94,7 @@ export async function GET(request) {
     // Daily breakdown for specific waiter or all
     const dailyBreakdown = {};
     orders?.forEach(order => {
-      const date = new Date(order.timestamp).toLocaleDateString('en-US', { 
+      const date = new Date(order.order_date).toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric'
       });
@@ -112,12 +112,12 @@ export async function GET(request) {
 
       dailyBreakdown[date].orders += 1;
       
-      if (order.status === 'PAID') {
+      if (order.payment_status === 'PAID') {
         dailyBreakdown[date].paidOrders += 1;
-        dailyBreakdown[date].revenue += parseFloat(order.total || 0);
+        dailyBreakdown[date].revenue += parseFloat(order.total_amount || 0);
       } else {
         dailyBreakdown[date].unpaidOrders += 1;
-        dailyBreakdown[date].unpaidAmount += parseFloat(order.total || 0);
+        dailyBreakdown[date].unpaidAmount += parseFloat(order.total_amount || 0);
       }
     });
 
@@ -127,21 +127,21 @@ export async function GET(request) {
 
     // Overall summary
     const totalOrders = orders?.length || 0;
-    const paidOrders = orders?.filter(o => o.status === 'PAID').length || 0;
-    const unpaidOrders = orders?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING').length || 0;
-    const totalRevenue = orders?.filter(o => o.status === 'PAID')
-      .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0;
-    const unpaidAmount = orders?.filter(o => o.status === 'UNPAID' || o.status === 'PENDING')
-      .reduce((sum, o) => sum + parseFloat(o.total || 0), 0) || 0;
+    const paidOrders = orders?.filter(o => o.payment_status === 'PAID').length || 0;
+    const unpaidOrders = orders?.filter(o => o.payment_status === 'UNPAID' || o.payment_status === 'PARTIAL').length || 0;
+    const totalRevenue = orders?.filter(o => o.payment_status === 'PAID')
+      .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0) || 0;
+    const unpaidAmount = orders?.filter(o => o.payment_status === 'UNPAID' || o.payment_status === 'PARTIAL')
+      .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0) || 0;
 
     // Include individual orders if querying for specific waiter
     const individualOrders = waiter ? orders?.map(order => ({
       id: order.id,
       order_number: order.order_number,
-      timestamp: order.timestamp,
+      timestamp: order.order_date,
       customer_name: order.customer_name,
-      total: order.total,
-      status: order.status,
+      total: order.total_amount,
+      status: order.payment_status,
       payment_method: order.payment_method
     })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)) : [];
 
