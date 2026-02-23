@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  useTheme,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
@@ -38,6 +39,7 @@ const COLORS = ['#2e7d32', '#d32f2f'];
 export default function WaiterDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const theme = useTheme();
   const waiterName = decodeURIComponent(params.waiter);
   
   const [user, setUser] = useState(null);
@@ -169,7 +171,7 @@ export default function WaiterDetailPage() {
             alignItems: "center",
             justifyContent: "center",
             width: { md: `calc(100% - ${drawerWidth}px)` },
-            bgcolor: "#fafafa",
+            bgcolor: "background.default",
           }}
         >
           <CircularProgress />
@@ -193,10 +195,10 @@ export default function WaiterDetailPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1600px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1800px", width: "100%" }}>
           {/* Header */}
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
@@ -254,18 +256,23 @@ export default function WaiterDetailPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2,
+                      p: 1.5,
                       border: 1,
                       borderColor: "primary.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#e3f2fd",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: 'primary.dark',
+                        boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)',
+                      },
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Total Orders
                     </Typography>
-                    <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mt: 1 }}>
+                    <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mt: 0.5 }}>
                       {reportData.summary.totalOrders}
                     </Typography>
                   </Paper>
@@ -275,18 +282,23 @@ export default function WaiterDetailPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2,
+                      p: 1.5,
                       border: 1,
                       borderColor: "success.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#f1f8f4",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: 'success.dark',
+                        boxShadow: '0 2px 8px rgba(46,125,50,0.15)',
+                      },
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Paid Orders
                     </Typography>
-                    <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mt: 1 }}>
+                    <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mt: 0.5 }}>
                       {reportData.summary.paidOrders}
                     </Typography>
                   </Paper>
@@ -296,18 +308,23 @@ export default function WaiterDetailPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2,
+                      p: 1.5,
                       border: 1,
                       borderColor: "error.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#fef5f5",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : '#fef5f5',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: 'error.dark',
+                        boxShadow: '0 2px 8px rgba(211,47,47,0.15)',
+                      },
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Unpaid Orders
                     </Typography>
-                    <Typography variant="h4" fontWeight={700} color="error.main" sx={{ mt: 1 }}>
+                    <Typography variant="h4" fontWeight={700} color="error.main" sx={{ mt: 0.5 }}>
                       {reportData.summary.unpaidOrders}
                     </Typography>
                   </Paper>
@@ -317,18 +334,23 @@ export default function WaiterDetailPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2,
+                      p: 1.5,
                       border: 1,
                       borderColor: "success.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#f1f8f4",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: 'success.dark',
+                        boxShadow: '0 2px 8px rgba(46,125,50,0.15)',
+                      },
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Total Revenue
                     </Typography>
-                    <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mt: 1 }}>
+                    <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mt: 0.5 }}>
                       {formatCurrency(reportData.summary.totalRevenue)}
                     </Typography>
                   </Paper>
@@ -338,15 +360,20 @@ export default function WaiterDetailPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2,
+                      p: 1.5,
                       border: 1,
                       borderColor: "error.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#fef5f5",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : '#fef5f5',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: 'error.dark',
+                        boxShadow: '0 2px 8px rgba(211,47,47,0.15)',
+                      },
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Unpaid Amount
                     </Typography>
                     <Typography variant="h4" fontWeight={700} color="error.main" sx={{ mt: 1 }}>
@@ -457,37 +484,37 @@ export default function WaiterDetailPage() {
                       Performance Summary
                     </Typography>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
+                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                           Success Rate (Paid Orders)
                         </Typography>
-                        <Typography variant="body2" fontWeight={700}>
+                        <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.875rem' }}>
                           {reportData.summary.totalOrders > 0 
                             ? ((reportData.summary.paidOrders / reportData.summary.totalOrders) * 100).toFixed(1)
                             : 0}%
                         </Typography>
                       </Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
+                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                           Total Revenue Generated
                         </Typography>
-                        <Typography variant="body2" fontWeight={700} color="success.main">
+                        <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontSize: '0.875rem' }}>
                           {formatCurrency(reportData.summary.totalRevenue)}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
+                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                           Outstanding Amount
                         </Typography>
-                        <Typography variant="body2" fontWeight={700} color="error.main">
+                        <Typography variant="body2" fontWeight={700} color="error.main" sx={{ fontSize: '0.875rem' }}>
                           {formatCurrency(reportData.summary.unpaidAmount)}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
+                      <Box sx={{ display: "flex", justifyContent: "space-between", p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                           Average Order Value
                         </Typography>
-                        <Typography variant="body2" fontWeight={700}>
+                        <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.875rem' }}>
                           {formatCurrency(reportData.summary.avgOrderValue)}
                         </Typography>
                       </Box>
@@ -502,7 +529,7 @@ export default function WaiterDetailPage() {
             <>
               {/* Orders Table */}
               <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#fafafa' }}>
                   <Typography variant="subtitle1" fontWeight={700}>
                     Order History ({reportData.orders?.length || 0} orders)
                   </Typography>
@@ -510,72 +537,79 @@ export default function WaiterDetailPage() {
                 <TableContainer sx={{ maxHeight: 600 }}>
                   <Table stickyHeader>
                     <TableHead>
-                      <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                        <TableCell sx={{ fontWeight: 700 }}>Order #</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Date & Time</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Payment Method</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700 }}>Status</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                      <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Order #</TableCell>
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Date & Time</TableCell>
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Customer</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Payment Method</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {reportData.orders?.length > 0 ? (
                         reportData.orders.map((order) => (
-                          <TableRow key={order.id} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
+                          <TableRow key={order.id} hover sx={{ "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                            <TableCell sx={{ py: 1.5 }}>
+                              <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                                 #{order.order_number}
                               </Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
+                            <TableCell sx={{ py: 1.5 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                                 {new Date(order.timestamp).toLocaleDateString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric'
                                 })}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                                 {new Date(order.timestamp).toLocaleTimeString('en-US', {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })}
                               </Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
+                            <TableCell sx={{ py: 1.5 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
                                 {order.customer_name || 'Walk-in'}
                               </Typography>
                             </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" fontWeight={700}>
+                            <TableCell align="right" sx={{ py: 1.5 }}>
+                              <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.875rem' }}>
                                 {formatCurrency(order.total)}
                               </Typography>
                             </TableCell>
-                            <TableCell>
+                            <TableCell sx={{ py: 1.5 }}>
                               <Chip
                                 label={order.payment_method || 'N/A'}
                                 size="small"
-                                sx={{ fontWeight: 600 }}
+                                sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }}
                               />
                             </TableCell>
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ py: 1.5 }}>
                               <Chip
                                 label={getDisplayStatus(order.status)}
                                 color={getStatusColor(order.status)}
                                 size="small"
-                                sx={{ fontWeight: 600, minWidth: 80 }}
+                                sx={{ fontWeight: 600, minWidth: 80, fontSize: '0.7rem', height: 24 }}
                               />
                             </TableCell>
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ py: 1.5 }}>
                               <IconButton
                                 size="small"
                                 onClick={() => handleViewOrder(order.id)}
-                                sx={{ color: "primary.main" }}
+                                sx={{ 
+                                  color: "primary.main",
+                                  '&:hover': {
+                                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : 'rgba(25, 118, 210, 0.08)',
+                                    transform: 'scale(1.1)'
+                                  },
+                                  transition: 'all 0.2s'
+                                }}
                               >
-                                <VisibilityIcon fontSize="small" />
+                                <VisibilityIcon sx={{ fontSize: '1.1rem' }} />
                               </IconButton>
                             </TableCell>
                           </TableRow>

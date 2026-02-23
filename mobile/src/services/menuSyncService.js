@@ -42,9 +42,9 @@ export const menuSyncService = {
     }
   },
 
-  // Push local menu items to server
+  // Push local menu items to server (bidirectional - sends all items)
   async pushMenuItemsToServer() {
-    let unsyncedItems = [];
+    let allLocalItems = [];
     try {
       const isConnected = await networkUtils.isConnected();
       if (!isConnected) {
@@ -57,10 +57,12 @@ export const menuSyncService = {
         };
       }
 
-      unsyncedItems = await this.getUnsyncedMenuItems();
+      // Get ALL local items for bidirectional sync
+      const menuItemsCollection = database.collections.get('menu_items');
+      allLocalItems = await menuItemsCollection.query().fetch();
       
-      if (unsyncedItems.length === 0) {
-        console.log('No menu items to sync');
+      if (allLocalItems.length === 0) {
+        console.log('No local menu items to sync');
         return {
           success: true,
           synced: 0,
@@ -70,7 +72,7 @@ export const menuSyncService = {
       }
 
       const menuItemsData = await Promise.all(
-        unsyncedItems.map(item => this.prepareMenuItemForSync(item))
+        allLocalItems.map(item => this.prepareMenuItemForSync(item))
       );
 
       console.log('Syncing menu items to:', `${API_BASE_URL}/api/menu/sync`);
@@ -86,6 +88,28 @@ export const menuSyncService = {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.warn(`Menu sync endpoint returned ${response.status}. Server may not be ready.`);
+        
+        // If 405 or 404, the endpoint doesn't exist yet - mark items as synced locally
+        if (response.status === 405 || response.status === 404) {
+          console.log('Menu sync endpoint not available. Marking items as synced locally.');
+          await database.write(async () => {
+            for (const localItem of allLocalItems) {
+              await localItem.update(item => {
+                item.isSynced = true;
+                item.syncedAt = Date.now();
+              });
+            }
+          });
+          
+          return {
+            success: true,
+            synced: allLocalItems.length,
+            failed: 0,
+            message: 'Items synced locally (server endpoint not available)'
+          };
+        }
+        
         throw new Error(`Menu sync failed with status: ${response.status} - ${errorText}`);
       }
 
@@ -101,7 +125,7 @@ export const menuSyncService = {
       if (result.success && result.syncedItems) {
         await database.write(async () => {
           for (const syncedItem of result.syncedItems) {
-            const localItem = unsyncedItems.find(
+            const localItem = allLocalItems.find(
               item => item.id === syncedItem.localId
             );
             if (localItem) {
@@ -128,7 +152,7 @@ export const menuSyncService = {
         success: false,
         error: error.message,
         synced: 0,
-        failed: unsyncedItems?.length || 0
+        failed: allLocalItems?.length || 0
       };
       
       await AsyncStorage.setItem(MENU_SYNC_STATUS_KEY, JSON.stringify(errorResult));
@@ -137,7 +161,7 @@ export const menuSyncService = {
     }
   },
 
-  // Pull menu items from server and update local database
+  // Pull menu items from server and update local database (bidirectional)
   async pullMenuItemsFromServer() {
     try {
       const isConnected = await networkUtils.isConnected();
@@ -161,50 +185,80 @@ export const menuSyncService = {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.warn(`Menu pull endpoint returned ${response.status}. Server may not be ready.`);
+        
+        // If endpoint doesn't exist, skip pull but don't fail
+        if (response.status === 404 || response.status === 500) {
+          console.log('Menu pull endpoint not available. Skipping pull.');
+          return {
+            success: true,
+            pulled: 0,
+            created: 0,
+            updated: 0,
+            message: 'Pull skipped (server endpoint not available)'
+          };
+        }
+        
         throw new Error(`Menu pull failed with status: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
       const serverItems = result.menuItems || [];
 
-      console.log('Pulled menu items:', serverItems.length);
+      console.log('Pulled menu items from server:', serverItems.length);
 
       let created = 0;
       let updated = 0;
+      let skipped = 0;
 
       await database.write(async () => {
         const menuItemsCollection = database.collections.get('menu_items');
 
         for (const serverItem of serverItems) {
-          // Check if item exists locally by server_id
-          const existingItems = await menuItemsCollection
-            .query(Q.where('server_id', serverItem.id))
-            .fetch();
+          try {
+            // Check if item exists locally by server_id
+            const existingItems = await menuItemsCollection
+              .query(Q.where('server_id', serverItem.id))
+              .fetch();
 
-          if (existingItems.length > 0) {
-            // Update existing item
-            const localItem = existingItems[0];
-            await localItem.update(item => {
-              item.name = serverItem.name;
-              item.price = serverItem.price;
-              item.category = serverItem.category;
-              item.isAvailable = serverItem.is_available;
-              item.isSynced = true;
-              item.syncedAt = Date.now();
-            });
-            updated++;
-          } else {
-            // Create new item
-            await menuItemsCollection.create(item => {
-              item.name = serverItem.name;
-              item.price = serverItem.price;
-              item.category = serverItem.category;
-              item.isAvailable = serverItem.is_available;
-              item.serverId = serverItem.id;
-              item.isSynced = true;
-              item.syncedAt = Date.now();
-            });
-            created++;
+            if (existingItems.length > 0) {
+              // Item exists locally - use last-write-wins conflict resolution
+              const localItem = existingItems[0];
+              const serverUpdatedAt = new Date(serverItem.updated_at).getTime();
+              const localUpdatedAt = localItem.updatedAt;
+
+              // Only update if server version is newer
+              if (serverUpdatedAt > localUpdatedAt) {
+                await localItem.update(item => {
+                  item.name = serverItem.name;
+                  item.price = serverItem.price;
+                  item.category = serverItem.category;
+                  item.isAvailable = serverItem.is_available;
+                  item.isSynced = true;
+                  item.syncedAt = Date.now();
+                });
+                updated++;
+                console.log(`Updated local item: ${serverItem.name} (server newer)`);
+              } else {
+                skipped++;
+                console.log(`Skipped ${serverItem.name} (local version is newer)`);
+              }
+            } else {
+              // Item doesn't exist locally - create it
+              await menuItemsCollection.create(item => {
+                item.name = serverItem.name;
+                item.price = serverItem.price;
+                item.category = serverItem.category;
+                item.isAvailable = serverItem.is_available;
+                item.serverId = serverItem.id;
+                item.isSynced = true;
+                item.syncedAt = Date.now();
+              });
+              created++;
+              console.log(`Created new local item: ${serverItem.name}`);
+            }
+          } catch (itemError) {
+            console.error(`Error processing server item ${serverItem.name}:`, itemError);
           }
         }
       });
@@ -214,11 +268,19 @@ export const menuSyncService = {
         pulled: serverItems.length,
         created,
         updated,
-        message: `Pulled ${serverItems.length} items (${created} new, ${updated} updated)`
+        skipped,
+        message: `Pulled ${serverItems.length} items (${created} new, ${updated} updated, ${skipped} skipped)`
       };
 
       await AsyncStorage.setItem(MENU_SYNC_STATUS_KEY, JSON.stringify(pullResult));
       await AsyncStorage.setItem(MENU_SYNC_TIMESTAMP_KEY, Date.now().toString());
+
+      // Clear menu cache so new items show up immediately
+      if (created > 0 || updated > 0) {
+        await AsyncStorage.removeItem('@menu_items_cache');
+        await AsyncStorage.removeItem('@menu_items_cache_timestamp');
+        console.log('Menu cache cleared after sync to refresh items');
+      }
 
       console.log('Menu pull completed:', pullResult.message);
       

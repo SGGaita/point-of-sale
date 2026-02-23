@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
@@ -29,11 +30,15 @@ import PersonIcon from "@mui/icons-material/Person";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import { useTheme as useAppTheme } from "@/contexts/ThemeContext";
 
 const drawerWidth = 260;
 
 const navItems = [
   { icon: <DashboardIcon />, label: "Dashboard", path: "/dashboard" },
+  { icon: <RestaurantMenuIcon />, label: "Menu", path: "/dashboard/menu" },
   { icon: <InventoryIcon />, label: "Inventory", path: "/dashboard/inventory" },
   { icon: <ShoppingCartIcon />, label: "Orders", path: "/dashboard/orders" },
   { icon: <BadgeIcon />, label: "Staff", path: "/dashboard/staff" },
@@ -46,6 +51,7 @@ export default function Sidebar({ user, onLogout }) {
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
+  const { mode, toggleTheme } = useAppTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -83,8 +89,10 @@ export default function Sidebar({ user, onLogout }) {
             width: 40,
             height: 40,
             borderRadius: 1,
-            background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
-            color: "white",
+            background: mode === 'dark' 
+              ? "linear-gradient(135deg, #90caf9 0%, #42a5f5 100%)"
+              : "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
+            color: mode === 'dark' ? "#000" : "white",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -120,24 +128,24 @@ export default function Sidebar({ user, onLogout }) {
                 sx={{
                   borderRadius: 1,
                   "&.Mui-selected": {
-                    backgroundColor: "#000",
-                    color: "#fff",
+                    backgroundColor: mode === 'dark' ? "primary.main" : "#000",
+                    color: mode === 'dark' ? "#000" : "#fff",
                     "&:hover": {
-                      backgroundColor: "#1a1a1a",
+                      backgroundColor: mode === 'dark' ? "primary.dark" : "#1a1a1a",
                     },
                     "& .MuiListItemIcon-root": {
-                      color: "#fff",
+                      color: mode === 'dark' ? "#000" : "#fff",
                     },
                   },
                   "&:hover": {
-                    backgroundColor: "rgba(0,0,0,0.04)",
+                    backgroundColor: mode === 'dark' ? "rgba(144, 202, 249, 0.08)" : "rgba(0,0,0,0.04)",
                   },
                 }}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 40,
-                    color: isActive ? "#fff" : "inherit",
+                    color: isActive ? (mode === 'dark' ? "#000" : "#fff") : "inherit",
                   }}
                 >
                   {item.icon}
@@ -157,12 +165,26 @@ export default function Sidebar({ user, onLogout }) {
 
       <Divider />
 
-      {/* User Section */}
+      {/* Theme Toggle & User Section */}
       <Box sx={{ p: 2.5, borderTop: 1, borderColor: "divider" }}>
+        <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
+          <IconButton
+            onClick={toggleTheme}
+            sx={{
+              bgcolor: mode === 'dark' ? "rgba(144, 202, 249, 0.1)" : "rgba(0,0,0,0.04)",
+              "&:hover": {
+                bgcolor: mode === 'dark' ? "rgba(144, 202, 249, 0.2)" : "rgba(0,0,0,0.08)",
+              },
+            }}
+          >
+            {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+        </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Avatar
             sx={{
-              bgcolor: "#000",
+              bgcolor: mode === 'dark' ? "primary.main" : "#000",
+              color: mode === 'dark' ? "#000" : "#fff",
               width: 40,
               height: 40,
               fontWeight: 600,
@@ -206,8 +228,8 @@ export default function Sidebar({ user, onLogout }) {
             borderColor: "divider",
             color: "text.primary",
             "&:hover": {
-              borderColor: "#000",
-              bgcolor: "rgba(0,0,0,0.04)",
+              borderColor: mode === 'dark' ? "primary.main" : "#000",
+              bgcolor: mode === 'dark' ? "rgba(144, 202, 249, 0.08)" : "rgba(0,0,0,0.04)",
             },
           }}
         >

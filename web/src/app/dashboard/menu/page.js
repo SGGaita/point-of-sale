@@ -29,25 +29,26 @@ import {
   Grid,
   Card,
   CardContent,
+  useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import Sidebar from "@/components/dashboard/Sidebar";
 
 const drawerWidth = 260;
 
 const menuCategories = [
   { value: "breakfast", label: "Breakfast", color: "#ff9800" },
-  { value: "beef", label: "Beef", color: "#d32f2f" },
   { value: "meals", label: "Meals", color: "#1976d2" },
-  { value: "beverages", label: "Beverages", color: "#388e3c" },
-  { value: "other", label: "Other", color: "#757575" },
 ];
 
 export default function MenuPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -290,125 +291,253 @@ export default function MenuPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1600px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1800px", width: "100%" }}>
+          {/* Header */}
           <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
-              <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
+              <Typography variant="h4" component="h1" gutterBottom fontWeight={700}>
                 Menu Management
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Manage your restaurant menu items
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenAddDialog}
-            >
-              Add Menu Item
-            </Button>
-          </Box>
-
-          {/* Category Filter */}
-          <Box sx={{ mb: 3, display: "flex", gap: 1, flexWrap: "wrap" }}>
-            <Chip
-              label="All"
-              onClick={() => handleCategoryFilter("all")}
-              color={selectedCategory === "all" ? "primary" : "default"}
-              sx={{ fontWeight: selectedCategory === "all" ? 600 : 400 }}
-            />
-            {menuCategories.map((category) => (
-              <Chip
-                key={category.value}
-                label={category.label}
-                onClick={() => handleCategoryFilter(category.value)}
+            <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+              <IconButton onClick={() => fetchMenuItems(selectedCategory)} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleOpenAddDialog}
                 sx={{
-                  bgcolor: selectedCategory === category.value ? category.color : "transparent",
-                  color: selectedCategory === category.value ? "#fff" : "text.primary",
-                  fontWeight: selectedCategory === category.value ? 600 : 400,
-                  border: `1px solid ${category.color}`,
+                  bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                  color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                  "&:hover": {
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a'
+                  }
                 }}
-              />
-            ))}
+              >
+                Add Menu Item
+              </Button>
+            </Box>
           </Box>
 
           {/* Stats Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Typography variant="body2" color="text.secondary">Total Items</Typography>
-                  <Typography variant="h5" fontWeight={700}>{menuItems.length}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Typography variant="body2" color="text.secondary">Available</Typography>
-                  <Typography variant="h5" fontWeight={700} color="success.main">
-                    {menuItems.filter(i => i.is_available).length}
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+            <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  height: "100%",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+                  }
+                }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
+                    Total Items
                   </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Typography variant="body2" color="text.secondary">Unavailable</Typography>
-                  <Typography variant="h5" fontWeight={700} color="error.main">
-                    {menuItems.filter(i => !i.is_available).length}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                <CardContent sx={{ p: 2 }}>
-                  <Typography variant="body2" color="text.secondary">Categories</Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {new Set(menuItems.map(i => i.category)).size}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress />
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "text.secondary" }} />
+                </Box>
+                <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>
+                  {menuItems.length}
+                </Typography>
+              </Paper>
             </Box>
-          ) : (
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+
+            <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: "success.main",
+                  borderRadius: 2,
+                  height: "100%",
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4',
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: "success.dark",
+                    boxShadow: "0 2px 8px rgba(46,125,50,0.15)"
+                  }
+                }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
+                    Available
+                  </Typography>
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "success.main" }} />
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
+                  {menuItems.filter(i => i.is_available).length}
+                </Typography>
+              </Paper>
+            </Box>
+
+            <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: "error.main",
+                  borderRadius: 2,
+                  height: "100%",
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : '#fef5f5',
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: "error.dark",
+                    boxShadow: "0 2px 8px rgba(211,47,47,0.15)"
+                  }
+                }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
+                    Unavailable
+                  </Typography>
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "error.main" }} />
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="error.main" sx={{ mb: 0.5 }}>
+                  {menuItems.filter(i => !i.is_available).length}
+                </Typography>
+              </Paper>
+            </Box>
+
+            <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: "primary.main",
+                  borderRadius: 2,
+                  height: "100%",
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd',
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: "primary.dark",
+                    boxShadow: "0 2px 8px rgba(25,118,210,0.15)"
+                  }
+                }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
+                    Categories
+                  </Typography>
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main" }} />
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mb: 0.5 }}>
+                  {new Set(menuItems.map(i => i.category)).size}
+                </Typography>
+              </Paper>
+            </Box>
+          </Box>
+
+          {/* Category Filter */}
+          <Paper elevation={0} sx={{ p: 3, mb: 3, border: 1, borderColor: "divider", borderRadius: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+              <FilterListIcon />
+              <Typography variant="h6" fontWeight={600}>
+                Filter by Category
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              <Chip
+                label="All"
+                onClick={() => handleCategoryFilter("all")}
+                sx={{
+                  bgcolor: selectedCategory === "all" ? (theme.palette.mode === 'dark' ? 'primary.main' : '#000') : 'transparent',
+                  color: selectedCategory === "all" ? (theme.palette.mode === 'dark' ? '#000' : '#fff') : 'text.primary',
+                  fontWeight: selectedCategory === "all" ? 600 : 400,
+                  border: 1,
+                  borderColor: selectedCategory === "all" ? (theme.palette.mode === 'dark' ? 'primary.main' : '#000') : 'divider',
+                  "&:hover": {
+                    bgcolor: selectedCategory === "all" ? (theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a') : (theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(0,0,0,0.04)')
+                  }
+                }}
+              />
+              {menuCategories.map((category) => (
+                <Chip
+                  key={category.value}
+                  label={category.label}
+                  onClick={() => handleCategoryFilter(category.value)}
+                  sx={{
+                    bgcolor: selectedCategory === category.value ? category.color : "transparent",
+                    color: selectedCategory === category.value ? "#fff" : "text.primary",
+                    fontWeight: selectedCategory === category.value ? 600 : 400,
+                    border: 1,
+                    borderColor: selectedCategory === category.value ? category.color : 'divider',
+                    "&:hover": {
+                      bgcolor: selectedCategory === category.value ? category.color : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.04)')
+                    }
+                  }}
+                />
+              ))}
+            </Box>
+          </Paper>
+
+          {/* Menu Items Table */}
+          <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+            <TableContainer>
               <Table>
-                <TableHead sx={{ bgcolor: "#f5f5f5" }}>
-                  <TableRow>
-                    <TableCell><strong>Item Name</strong></TableCell>
-                    <TableCell><strong>Category</strong></TableCell>
-                    <TableCell><strong>Price</strong></TableCell>
-                    <TableCell><strong>Unit</strong></TableCell>
-                    <TableCell><strong>Prep Time</strong></TableCell>
-                    <TableCell><strong>Available</strong></TableCell>
-                    <TableCell align="right"><strong>Actions</strong></TableCell>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Item Name</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Category</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Price</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Unit</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Prep Time</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Available</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {menuItems.map((item) => (
-                    <TableRow key={item.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <CircularProgress />
+                      </TableCell>
+                    </TableRow>
+                  ) : menuItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                        <Typography color="text.secondary">
+                          No menu items found. Add your first menu item.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    menuItems.map((item) => (
+                    <TableRow 
+                      key={item.id} 
+                      hover
+                      sx={{
+                        "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' },
+                        transition: "background-color 0.2s"
+                      }}
+                    >
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                           {item.name}
                         </Typography>
                         {item.description && (
-                          <Typography variant="caption" color="text.secondary" display="block">
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.75rem' }}>
                             {item.description}
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
                         <Chip
                           label={menuCategories.find(c => c.value === item.category)?.label || item.category}
                           size="small"
@@ -416,56 +545,67 @@ export default function MenuPage() {
                             bgcolor: getCategoryColor(item.category),
                             color: "#fff",
                             fontWeight: 600,
+                            fontSize: '0.7rem',
+                            height: 24
                           }}
                         />
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={600}>
+                      <TableCell align="right" sx={{ py: 1.5 }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.875rem' }}>
                           {formatCurrency(item.price)}
                         </Typography>
                       </TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem', py: 1.5 }}>{item.unit}</TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem', py: 1.5 }}>
                         {item.preparation_time ? `${item.preparation_time} min` : "N/A"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ py: 1.5 }}>
                         <Switch
                           checked={item.is_available}
                           onChange={() => handleToggleAvailability(item)}
                           size="small"
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="center" sx={{ py: 1.5 }}>
                         <IconButton
                           size="small"
                           onClick={() => handleOpenEditDialog(item)}
+                          sx={{
+                            color: "primary.main",
+                            "&:hover": {
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : 'rgba(25, 118, 210, 0.08)',
+                              transform: 'scale(1.1)'
+                            },
+                            transition: 'all 0.2s'
+                          }}
                         >
-                          <EditIcon fontSize="small" />
+                          <EditIcon sx={{ fontSize: '1.1rem' }} />
                         </IconButton>
                         <IconButton
                           size="small"
-                          color="error"
                           onClick={() => {
                             setSelectedItem(item);
                             setOpenDeleteDialog(true);
                           }}
+                          sx={{
+                            color: "error.main",
+                            "&:hover": {
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : 'rgba(211, 47, 47, 0.08)',
+                              transform: 'scale(1.1)'
+                            },
+                            transition: 'all 0.2s'
+                          }}
                         >
-                          <DeleteIcon fontSize="small" />
+                          <DeleteIcon sx={{ fontSize: '1.1rem' }} />
                         </IconButton>
                       </TableCell>
                     </TableRow>
-                  ))}
-                  {menuItems.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography color="text.secondary">No menu items found. Add your first menu item.</Typography>
-                      </TableCell>
-                    </TableRow>
+                  ))
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
+          </Paper>
         </Box>
       </Box>
 

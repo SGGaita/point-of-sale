@@ -17,6 +17,7 @@ import {
   CircularProgress,
   Chip,
   Alert,
+  useTheme,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -29,6 +30,7 @@ const COLORS = ['#2e7d32', '#1976d2', '#f57c00', '#d32f2f', '#7b1fa2', '#00897b'
 
 export default function ReportsPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -134,7 +136,7 @@ export default function ReportsPage() {
             alignItems: "center",
             justifyContent: "center",
             width: { md: `calc(100% - ${drawerWidth}px)` },
-            bgcolor: "#fafafa",
+            bgcolor: "background.default",
           }}
         >
           <CircularProgress />
@@ -153,10 +155,10 @@ export default function ReportsPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1600px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1800px", width: "100%" }}>
           {/* Header */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="h4" component="h1" gutterBottom fontWeight={700}>
@@ -193,8 +195,14 @@ export default function ReportsPage() {
                 variant="contained" 
                 onClick={fetchReports}
                 sx={{
-                  bgcolor: "#000",
-                  "&:hover": { bgcolor: "#1a1a1a" }
+                  px: 2.5,
+                  py: 1,
+                  fontSize: '0.875rem',
+                  bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                  color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                  "&:hover": { 
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a'
+                  }
                 }}
               >
                 Generate Report
@@ -205,9 +213,15 @@ export default function ReportsPage() {
                 onClick={handleExportReport}
                 disabled={!reportData}
                 sx={{
-                  borderColor: "#000",
-                  color: "#000",
-                  "&:hover": { borderColor: "#1a1a1a", bgcolor: "rgba(0,0,0,0.04)" }
+                  px: 2.5,
+                  py: 1,
+                  fontSize: '0.875rem',
+                  borderColor: 'divider',
+                  color: 'text.primary',
+                  "&:hover": { 
+                    borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(0,0,0,0.04)'
+                  }
                 }}
               >
                 Export CSV
@@ -229,12 +243,12 @@ export default function ReportsPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2,
+                      p: 1.5,
                       border: 1,
                       borderColor: "success.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#f1f8f4",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4',
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "success.dark",
@@ -242,11 +256,11 @@ export default function ReportsPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                         Total Revenue
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "success.main" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "success.main" }} />
                     </Box>
                     <Typography variant="h4" fontWeight={700} color="success.main">
                       {formatCurrency(reportData.summary.totalRevenue)}
@@ -258,12 +272,12 @@ export default function ReportsPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "primary.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#e3f2fd",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd',
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "primary.dark",
@@ -271,11 +285,11 @@ export default function ReportsPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                         Total Orders
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "primary.main" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main" }} />
                     </Box>
                     <Typography variant="h4" fontWeight={700} color="primary.main">
                       {reportData.summary.totalOrders}
@@ -287,23 +301,23 @@ export default function ReportsPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "divider",
                       borderRadius: 2,
                       height: "100%",
                       transition: "all 0.2s",
                       "&:hover": {
-                        borderColor: "#000",
+                        borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
                         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                         Avg Order Value
                       </Typography>
-                      <TrendingUpIcon fontSize="small" sx={{ color: "success.main" }} />
+                      <TrendingUpIcon sx={{ fontSize: '1rem', color: "success.main" }} />
                     </Box>
                     <Typography variant="h4" fontWeight={700}>
                       {formatCurrency(reportData.summary.avgOrderValue)}
@@ -315,12 +329,12 @@ export default function ReportsPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "error.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#fef5f5",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : '#fef5f5',
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "error.dark",
@@ -328,11 +342,11 @@ export default function ReportsPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                         Unpaid Amount
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "error.main" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "error.main" }} />
                     </Box>
                     <Typography variant="h4" fontWeight={700} color="error.main">
                       {formatCurrency(reportData.statusBreakdown.unpaidAmount)}
@@ -440,7 +454,7 @@ export default function ReportsPage() {
                 {/* Sales by Item Table */}
                 <Box sx={{ flex: "1 1 100%", minWidth: "300px" }}>
                   <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                    <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
+                    <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#fafafa' }}>
                       <Typography variant="subtitle1" fontWeight={700}>
                         Sales by Item
                       </Typography>
@@ -448,36 +462,36 @@ export default function ReportsPage() {
                     <TableContainer sx={{ maxHeight: 350 }}>
                       <Table stickyHeader>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                            <TableCell sx={{ fontWeight: 700 }}>Item Name</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Quantity Sold</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Unit Price</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Total Sales</TableCell>
+                          <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
+                            <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Item Name</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Quantity Sold</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Unit Price</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Total Sales</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {reportData.salesByItem.length > 0 ? (
                             reportData.salesByItem.map((item, index) => (
-                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={500}>
+                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                                <TableCell sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.875rem' }}>
                                     {item.itemName}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
                                   <Chip 
                                     label={item.quantitySold} 
                                     size="small" 
-                                    sx={{ fontWeight: 600, bgcolor: "#e3f2fd", color: "#1976d2" }} 
+                                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24, bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.2)' : '#e3f2fd', color: "primary.main" }} 
                                   />
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2" color="text.secondary">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                                     {formatCurrency(item.unitPrice)}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2" fontWeight={700} color="success.main">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontSize: '0.875rem' }}>
                                     {formatCurrency(item.totalSales)}
                                   </Typography>
                                 </TableCell>
@@ -501,38 +515,38 @@ export default function ReportsPage() {
                 {/* Sales by Waiter Table */}
                 <Box sx={{ flex: "1 1 500px", minWidth: "300px" }}>
                   <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                    <Box sx={{ p: 2.5, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
-                      <Typography variant="h6" fontWeight={700}>
+                    <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#fafafa' }}>
+                      <Typography variant="subtitle1" fontWeight={700}>
                         Performance by Waiter
                       </Typography>
                     </Box>
                     <TableContainer>
                       <Table>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                            <TableCell sx={{ fontWeight: 700 }}>Waiter</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Orders</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Total Sales</TableCell>
+                          <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
+                            <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Waiter</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Orders</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Total Sales</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {reportData.salesByWaiter.length > 0 ? (
                             reportData.salesByWaiter.map((waiter, index) => (
-                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={600}>
+                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                                <TableCell sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                                     {waiter.waiter}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
                                   <Chip 
                                     label={waiter.orderCount} 
                                     size="small" 
-                                    sx={{ fontWeight: 600 }} 
+                                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }} 
                                   />
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2" fontWeight={700} color="success.main">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontSize: '0.875rem' }}>
                                     {formatCurrency(waiter.totalSales)}
                                   </Typography>
                                 </TableCell>
@@ -554,38 +568,38 @@ export default function ReportsPage() {
                 {/* Top Customers Table */}
                 <Box sx={{ flex: "1 1 500px", minWidth: "300px" }}>
                   <Paper elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                    <Box sx={{ p: 2.5, borderBottom: 1, borderColor: "divider", bgcolor: "#fafafa" }}>
-                      <Typography variant="h6" fontWeight={700}>
+                    <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#fafafa' }}>
+                      <Typography variant="subtitle1" fontWeight={700}>
                         Top Customers
                       </Typography>
                     </Box>
                     <TableContainer>
                       <Table>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                            <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Orders</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 700 }}>Total Spent</TableCell>
+                          <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
+                            <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Customer</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Orders</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Total Spent</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {reportData.topCustomers.length > 0 ? (
                             reportData.topCustomers.map((customer, index) => (
-                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: "rgba(0,0,0,0.02)" } }}>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={600}>
+                              <TableRow key={index} hover sx={{ "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                                <TableCell sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                                     {customer.customerName}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
                                   <Chip 
                                     label={customer.orderCount} 
                                     size="small" 
-                                    sx={{ fontWeight: 600 }} 
+                                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }} 
                                   />
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2" fontWeight={700} color="success.main">
+                                <TableCell align="right" sx={{ py: 1.5 }}>
+                                  <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontSize: '0.875rem' }}>
                                     {formatCurrency(customer.totalSpent)}
                                   </Typography>
                                 </TableCell>

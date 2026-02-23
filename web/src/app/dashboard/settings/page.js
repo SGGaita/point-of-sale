@@ -19,6 +19,7 @@ import {
   Switch,
   FormControlLabel,
   InputAdornment,
+  useTheme,
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -41,6 +42,7 @@ const currencyOptions = [
 
 export default function SettingsPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -183,10 +185,10 @@ export default function SettingsPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1200px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1400px", width: "100%" }}>
           <Box sx={{ mb: 4 }}>
             <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
               System Settings
@@ -204,16 +206,16 @@ export default function SettingsPage() {
             <Grid container spacing={3}>
               {/* Currency Settings */}
               <Grid item xs={12} md={6}>
-                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-                      <AttachMoneyIcon color="primary" />
-                      <Typography variant="h6" fontWeight={600}>
+                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2.5 }}>
+                      <AttachMoneyIcon color="primary" sx={{ fontSize: '1.25rem' }} />
+                      <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1rem' }}>
                         Currency Settings
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       <TextField
                         label="Currency"
                         select
@@ -263,16 +265,16 @@ export default function SettingsPage() {
 
               {/* Tax Settings */}
               <Grid item xs={12} md={6}>
-                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-                      <ReceiptIcon color="primary" />
-                      <Typography variant="h6" fontWeight={600}>
+                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2.5 }}>
+                      <ReceiptIcon color="primary" sx={{ fontSize: '1.25rem' }} />
+                      <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1rem' }}>
                         Tax Settings
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       <FormControlLabel
                         control={
                           <Switch
@@ -319,16 +321,16 @@ export default function SettingsPage() {
 
               {/* Business Information */}
               <Grid item xs={12}>
-                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-                      <BusinessIcon color="primary" />
-                      <Typography variant="h6" fontWeight={600}>
+                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2.5 }}>
+                      <BusinessIcon color="primary" sx={{ fontSize: '1.25rem' }} />
+                      <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1rem' }}>
                         Business Information
                       </Typography>
                     </Box>
                     
-                    <Grid container spacing={2.5}>
+                    <Grid container spacing={2}>
                       <Grid item xs={12} md={6}>
                         <TextField
                           label="Business Name"
@@ -384,16 +386,16 @@ export default function SettingsPage() {
 
               {/* Notification Settings */}
               <Grid item xs={12} md={6}>
-                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-                      <NotificationsIcon color="primary" />
-                      <Typography variant="h6" fontWeight={600}>
+                <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2.5 }}>
+                      <NotificationsIcon color="primary" sx={{ fontSize: '1.25rem' }} />
+                      <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1rem' }}>
                         Notifications
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       <TextField
                         label="Low Stock Threshold"
                         type="number"
@@ -424,15 +426,35 @@ export default function SettingsPage() {
                     variant="outlined"
                     onClick={fetchSettings}
                     disabled={saving}
+                    sx={{
+                      px: 2.5,
+                      py: 1,
+                      fontSize: '0.875rem',
+                      borderColor: 'divider',
+                      color: 'text.primary',
+                      "&:hover": { 
+                        borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(0,0,0,0.04)'
+                      }
+                    }}
                   >
                     Reset
                   </Button>
                   <Button
                     variant="contained"
-                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                    startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon sx={{ fontSize: '1.1rem' }} />}
                     onClick={handleSaveSettings}
                     disabled={saving}
-                    sx={{ px: 4 }}
+                    sx={{ 
+                      px: 3,
+                      py: 1,
+                      fontSize: '0.875rem',
+                      bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                      color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                      "&:hover": { 
+                        bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a'
+                      }
+                    }}
                   >
                     {saving ? "Saving..." : "Save Settings"}
                   </Button>

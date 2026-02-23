@@ -7,6 +7,8 @@ export async function GET(request) {
     const category = searchParams.get('category');
     const available = searchParams.get('available');
 
+    console.log('Fetching menu items from Supabase...');
+
     let query = supabase
       .from('menu_items')
       .select('*')
@@ -23,13 +25,17 @@ export async function GET(request) {
 
     const { data: menuItems, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
 
+    console.log(`Fetched ${menuItems?.length || 0} menu items`);
     return NextResponse.json({ menuItems: menuItems || [] });
   } catch (error) {
-    console.error('Error fetching menu items:', error);
+    console.error('Error fetching menu items:', error.message, error);
     return NextResponse.json(
-      { error: 'Failed to fetch menu items' },
+      { error: 'Failed to fetch menu items', details: error.message },
       { status: 500 }
     );
   }
@@ -57,23 +63,17 @@ export async function POST(request) {
       );
     }
 
+    // Only insert fields that exist in the actual Supabase table
+    const insertData = {
+      name,
+      category,
+      price: parseFloat(price),
+      is_available: true,
+    };
+
     const { data: menuItem, error } = await supabase
       .from('menu_items')
-      .insert({
-        id: crypto.randomUUID(),
-        inventory_item_id: inventoryItemId || null,
-        name,
-        description: description || null,
-        category,
-        price: parseFloat(price),
-        unit,
-        is_available: true,
-        preparation_time: preparationTime || null,
-        image_url: imageUrl || null,
-        created_by: createdBy || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single();
 

@@ -31,6 +31,7 @@ import {
   CardContent,
   Divider,
   Autocomplete,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -68,6 +69,7 @@ const units = [
 
 export default function InventoryPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [user, setUser] = useState(null);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [dailyEntries, setDailyEntries] = useState([]);
@@ -467,10 +469,10 @@ export default function InventoryPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1400px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1800px", width: "100%" }}>
           <Box
             sx={{
               display: "flex",
@@ -493,7 +495,17 @@ export default function InventoryPage() {
               <Button
                 variant="outlined"
                 onClick={handleOpenMorningEntry}
-                sx={{ px: 2, py: 1.5, fontSize: '0.875rem' }}
+                sx={{ 
+                  px: 2.5, 
+                  py: 1, 
+                  fontSize: '0.875rem',
+                  borderColor: 'divider',
+                  color: 'text.primary',
+                  '&:hover': {
+                    borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(0,0,0,0.04)',
+                  }
+                }}
               >
                 Morning Entry
               </Button>
@@ -501,14 +513,14 @@ export default function InventoryPage() {
                 variant="outlined"
                 onClick={handleOpenClosingStock}
                 sx={{ 
-                  px: 2, 
-                  py: 1.5, 
+                  px: 2.5, 
+                  py: 1, 
                   fontSize: '0.875rem',
-                  borderColor: '#9c27b0',
-                  color: '#9c27b0',
+                  borderColor: 'secondary.main',
+                  color: 'secondary.main',
                   '&:hover': {
-                    borderColor: '#7b1fa2',
-                    bgcolor: 'rgba(156, 39, 176, 0.04)'
+                    borderColor: 'secondary.dark',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(206, 147, 216, 0.08)' : 'rgba(156, 39, 176, 0.04)'
                   }
                 }}
               >
@@ -518,70 +530,115 @@ export default function InventoryPage() {
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={handleOpenDialog}
-                sx={{ px: 2, py: 1.5, fontSize: '0.875rem' }}
+                sx={{ 
+                  px: 2.5, 
+                  py: 1, 
+                  fontSize: '0.875rem',
+                  bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                  color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a',
+                  }
+                }}
               >
                 Add Item
               </Button>
             </Box>
           </Box>
 
-          {/* Alert Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ bgcolor: "#fff3e0", borderLeft: "4px solid #ff9800" }}>
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <WarningIcon sx={{ color: "#ff9800", fontSize: '1.2rem' }} />
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ fontSize: '0.95rem' }}>
-                      Low Stock Alert
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" fontWeight={700} color="#ff9800" sx={{ my: 0.5 }}>
-                    {lowStockItems.length}
+          {/* Stats Cards */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2.5 }}>
+            <Box sx={{ flex: '1 1 200px', minWidth: '180px' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: 'warning.main',
+                  borderRadius: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.1)' : '#fff3e0',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    borderColor: 'warning.dark',
+                    boxShadow: '0 2px 8px rgba(255, 152, 0, 0.15)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                  <WarningIcon sx={{ color: 'warning.main', fontSize: '1rem' }} />
+                  <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Low Stock Alert
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Items below minimum level
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="warning.main" sx={{ mb: 0.5 }}>
+                  {lowStockItems.length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Items below minimum level
+                </Typography>
+              </Paper>
+            </Box>
+            <Box sx={{ flex: '1 1 200px', minWidth: '180px' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: 'success.main',
+                  borderRadius: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.1)' : '#e8f5e9',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    borderColor: 'success.dark',
+                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.15)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                  <CheckCircleIcon sx={{ color: 'success.main', fontSize: '1rem' }} />
+                  <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Raw Materials
                   </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ bgcolor: "#e8f5e9", borderLeft: "4px solid #4caf50" }}>
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <CheckCircleIcon sx={{ color: "#4caf50", fontSize: '1.2rem' }} />
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ fontSize: '0.95rem' }}>
-                      Raw Materials
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" fontWeight={700} color="#4caf50" sx={{ my: 0.5 }}>
-                    {rawItems.length}
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
+                  {rawItems.length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Active raw materials
+                </Typography>
+              </Paper>
+            </Box>
+            <Box sx={{ flex: '1 1 200px', minWidth: '180px' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  border: 1,
+                  borderColor: 'primary.main',
+                  borderRadius: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.1)' : '#e3f2fd',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                    boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                  <CheckCircleIcon sx={{ color: 'primary.main', fontSize: '1rem' }} />
+                  <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Cooked Items
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Active raw materials
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ bgcolor: "#e3f2fd", borderLeft: "4px solid #2196f3" }}>
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <CheckCircleIcon sx={{ color: "#2196f3", fontSize: '1.2rem' }} />
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ fontSize: '0.95rem' }}>
-                      Cooked Items
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" fontWeight={700} color="#2196f3" sx={{ my: 0.5 }}>
-                    {cookedItems.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Active cooked items
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mb: 0.5 }}>
+                  {cookedItems.length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  Active cooked items
+                </Typography>
+              </Paper>
+            </Box>
+          </Box>
 
           {/* Tabs and Search */}
           <Paper
@@ -623,12 +680,12 @@ export default function InventoryPage() {
                   }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#f5f5f5',
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5',
                       '&:hover': {
-                        bgcolor: '#eeeeee',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#eeeeee',
                       },
                       '&.Mui-focused': {
-                        bgcolor: '#fff',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#fff',
                       }
                     }
                   }}
@@ -647,14 +704,14 @@ export default function InventoryPage() {
               <TableContainer>
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "#fafafa" }}>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }}>Item Name</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }}>Category</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }} align="center">Current Stock</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }} align="center">Min Level</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }} align="center">Unit</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }} align="center">Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }} align="center">Actions</TableCell>
+                    <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Item Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Category</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }} align="center">Current Stock</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }} align="center">Min Level</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }} align="center">Unit</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }} align="center">Status</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', color: 'text.primary', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }} align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -666,55 +723,57 @@ export default function InventoryPage() {
                         hover
                         sx={{
                           '&:hover': {
-                            bgcolor: 'rgba(0, 0, 0, 0.02)'
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
                           },
                           transition: 'background-color 0.2s'
                         }}
                       >
-                        <TableCell sx={{ py: 2 }}>
-                          <Typography variant="body1" fontWeight={600} sx={{ fontSize: '0.95rem' }}>
+                        <TableCell sx={{ py: 1.5 }}>
+                          <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                             {item.name}
                           </Typography>
                         </TableCell>
-                        <TableCell sx={{ py: 2 }}>
+                        <TableCell sx={{ py: 1.5 }}>
                           <Chip
                             label={item.category || "Uncategorized"}
                             size="small"
                             sx={{ 
-                              bgcolor: item.type === "RAW" ? "#e8f5e9" : "#e3f2fd",
+                              bgcolor: item.type === "RAW" 
+                                ? (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.2)' : '#e8f5e9')
+                                : (theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : '#e3f2fd'),
                               color: item.type === "RAW" ? "#2e7d32" : "#1976d2",
                               fontWeight: 500,
                               fontSize: '0.75rem'
                             }}
                           />
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 2 }}>
+                        <TableCell align="center" sx={{ py: 1.5 }}>
                           <Box sx={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            minWidth: 60,
+                            minWidth: 50,
                             px: 1.5,
                             py: 0.5,
                             borderRadius: 1,
                             bgcolor: item.current_stock <= item.min_stock_level ? 'rgba(211, 47, 47, 0.08)' : 'rgba(46, 125, 50, 0.08)'
                           }}>
                             <Typography 
-                              variant="body1" 
+                              variant="body2" 
                               fontWeight={700}
-                              color={item.current_stock <= item.min_stock_level ? "#d32f2f" : "#2e7d32"}
-                              sx={{ fontSize: '0.95rem' }}
+                              color={item.current_stock <= item.min_stock_level ? "error.main" : "success.main"}
+                              sx={{ fontSize: '0.875rem' }}
                             >
                               {item.current_stock}
                             </Typography>
                           </Box>
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 2 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                        <TableCell align="center" sx={{ py: 1.5 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                             {item.min_stock_level}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 2 }}>
+                        <TableCell align="center" sx={{ py: 1.5 }}>
                           <Chip
                             label={item.unit}
                             size="small"
@@ -722,53 +781,53 @@ export default function InventoryPage() {
                             sx={{ fontSize: '0.75rem', fontWeight: 500 }}
                           />
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 2 }}>
+                        <TableCell align="center" sx={{ py: 1.5 }}>
                           {item.current_stock <= item.min_stock_level ? (
                             <Chip
                               label="Low Stock"
                               size="small"
                               color="error"
-                              icon={<WarningIcon sx={{ fontSize: '1rem' }} />}
-                              sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                              icon={<WarningIcon sx={{ fontSize: '0.9rem' }} />}
+                              sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }}
                             />
                           ) : (
                             <Chip
                               label="In Stock"
                               size="small"
                               color="success"
-                              sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                              sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }}
                             />
                           )}
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 2 }}>
+                        <TableCell align="center" sx={{ py: 1.5 }}>
                           <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
                             <IconButton
                               onClick={() => handleOpenEditDialog(item)}
                               size="small"
                               sx={{
-                                color: "#1976d2",
+                                color: "primary.main",
                                 "&:hover": { 
-                                  bgcolor: "rgba(25, 118, 210, 0.08)",
+                                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : 'rgba(25, 118, 210, 0.08)',
                                   transform: 'scale(1.1)'
                                 },
                                 transition: 'all 0.2s'
                               }}
                             >
-                              <EditIcon fontSize="small" />
+                              <EditIcon sx={{ fontSize: '1.1rem' }} />
                             </IconButton>
                             <IconButton
                               onClick={() => handleOpenDeleteDialog(item)}
                               size="small"
                               sx={{
-                                color: "#d32f2f",
+                                color: "error.main",
                                 "&:hover": { 
-                                  bgcolor: "rgba(211, 47, 47, 0.08)",
+                                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : 'rgba(211, 47, 47, 0.08)',
                                   transform: 'scale(1.1)'
                                 },
                                 transition: 'all 0.2s'
                               }}
                             >
-                              <DeleteIcon fontSize="small" />
+                              <DeleteIcon sx={{ fontSize: '1.1rem' }} />
                             </IconButton>
                           </Box>
                         </TableCell>

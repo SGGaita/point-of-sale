@@ -30,6 +30,7 @@ import {
   Grid,
   Card,
   CardContent,
+  useTheme,
 } from "@mui/material";
 import Sidebar from "@/components/dashboard/Sidebar";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -42,6 +43,7 @@ const drawerWidth = 260;
 
 export default function OrdersPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -247,10 +249,10 @@ export default function OrdersPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1600px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1800px", width: "100%" }}>
           {/* Header */}
           <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
@@ -268,30 +270,30 @@ export default function OrdersPage() {
 
           {/* Summary Cards */}
           {summary && (
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 3 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
               <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
                 <Paper 
                   elevation={0} 
                   sx={{ 
-                    p: 2.5,
+                    p: 1.5,
                     border: 1,
                     borderColor: "divider",
                     borderRadius: 2,
                     height: "100%",
                     transition: "all 0.2s",
                     "&:hover": {
-                      borderColor: "#000",
+                      borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
                       boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
                     }
                   }}
                 >
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Total Orders
                     </Typography>
-                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#9e9e9e" }} />
+                    <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "text.secondary" }} />
                   </Box>
-                  <Typography variant="h3" fontWeight={700} sx={{ mb: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>
                     {summary.total}
                   </Typography>
                 </Paper>
@@ -301,12 +303,12 @@ export default function OrdersPage() {
                 <Paper 
                   elevation={0} 
                   sx={{ 
-                    p: 2.5,
+                    p: 1.5,
                     border: 1,
                     borderColor: "success.main",
                     borderRadius: 2,
                     height: "100%",
-                    bgcolor: "#f1f8f4",
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4',
                     transition: "all 0.2s",
                     "&:hover": {
                       borderColor: "success.dark",
@@ -314,16 +316,16 @@ export default function OrdersPage() {
                     }
                   }}
                 >
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Paid
                     </Typography>
-                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "success.main" }} />
+                    <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "success.main" }} />
                   </Box>
-                  <Typography variant="h3" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
                     {summary.paid}
                   </Typography>
-                  <Typography variant="body2" fontWeight={600} color="success.dark">
+                  <Typography variant="caption" fontWeight={600} color="success.dark" sx={{ fontSize: '0.75rem' }}>
                     {formatCurrency(summary.totalRevenue)}
                   </Typography>
                 </Paper>
@@ -333,12 +335,12 @@ export default function OrdersPage() {
                 <Paper 
                   elevation={0} 
                   sx={{ 
-                    p: 2.5,
+                    p: 1.5,
                     border: 1,
                     borderColor: "error.main",
                     borderRadius: 2,
                     height: "100%",
-                    bgcolor: "#fef5f5",
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : '#fef5f5',
                     transition: "all 0.2s",
                     "&:hover": {
                       borderColor: "error.dark",
@@ -346,16 +348,16 @@ export default function OrdersPage() {
                     }
                   }}
                 >
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: '0.7rem' }}>
                       Unpaid
                     </Typography>
-                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "error.main" }} />
+                    <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "error.main" }} />
                   </Box>
-                  <Typography variant="h3" fontWeight={700} color="error.main" sx={{ mb: 0.5 }}>
+                  <Typography variant="h4" fontWeight={700} color="error.main" sx={{ mb: 0.5 }}>
                     {summary.unpaid}
                   </Typography>
-                  <Typography variant="body2" fontWeight={600} color="error.dark">
+                  <Typography variant="caption" fontWeight={600} color="error.dark" sx={{ fontSize: '0.75rem' }}>
                     {formatCurrency(summary.unpaidAmount)}
                   </Typography>
                 </Paper>
@@ -435,8 +437,14 @@ export default function OrdersPage() {
                   fetchOrders();
                 }}
                 sx={{ 
-                  bgcolor: "#000",
-                  "&:hover": { bgcolor: "#1a1a1a" }
+                  px: 2.5,
+                  py: 1,
+                  fontSize: '0.875rem',
+                  bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                  color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                  "&:hover": { 
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a'
+                  }
                 }}
               >
                 Apply Filters
@@ -451,9 +459,15 @@ export default function OrdersPage() {
                   setPagination({ ...pagination, page: 1 });
                 }}
                 sx={{
-                  borderColor: "#000",
-                  color: "#000",
-                  "&:hover": { borderColor: "#1a1a1a", bgcolor: "rgba(0,0,0,0.04)" }
+                  px: 2.5,
+                  py: 1,
+                  fontSize: '0.875rem',
+                  borderColor: 'divider',
+                  color: 'text.primary',
+                  "&:hover": { 
+                    borderColor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(0,0,0,0.04)'
+                  }
                 }}
               >
                 Clear
@@ -473,62 +487,71 @@ export default function OrdersPage() {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                  <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
                     <TableCell 
                       sx={{ 
                         fontWeight: 700, 
-                        fontSize: "0.875rem",
+                        fontSize: "0.75rem",
+                        py: 1.5,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
                         cursor: "pointer",
                         userSelect: "none",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" }
+                        "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.04)' }
                       }}
                       onClick={() => handleSort("order_number")}
                     >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                         Order #
                         {sortField === "order_number" && (
-                          sortOrder === "asc" ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                          sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: '1rem' }} /> : <ArrowDownwardIcon sx={{ fontSize: '1rem' }} />
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Waiter</TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Customer</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Total</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Waiter</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Customer</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Total</TableCell>
                     <TableCell 
                       sx={{ 
                         fontWeight: 700, 
-                        fontSize: "0.875rem",
+                        fontSize: "0.75rem",
+                        py: 1.5,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
                         cursor: "pointer",
                         userSelect: "none",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" }
+                        "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.04)' }
                       }}
                       onClick={() => handleSort("status")}
                     >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                         Status
                         {sortField === "status" && (
-                          sortOrder === "asc" ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                          sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: '1rem' }} /> : <ArrowDownwardIcon sx={{ fontSize: '1rem' }} />
                         )}
                       </Box>
                     </TableCell>
                     <TableCell 
                       sx={{ 
                         fontWeight: 700, 
-                        fontSize: "0.875rem",
+                        fontSize: "0.75rem",
+                        py: 1.5,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
                         cursor: "pointer",
                         userSelect: "none",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" }
+                        "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.04)' }
                       }}
                       onClick={() => handleSort("timestamp")}
                     >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                         Date
                         {sortField === "timestamp" && (
-                          sortOrder === "asc" ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                          sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: '1rem' }} /> : <ArrowDownwardIcon sx={{ fontSize: '1rem' }} />
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.875rem" }}>Actions</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, fontSize: "0.75rem", py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -552,39 +575,43 @@ export default function OrdersPage() {
                         key={order.id} 
                         hover
                         sx={{ 
-                          "&:hover": { bgcolor: "rgba(0,0,0,0.02)" },
+                          "&:hover": { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' },
                           transition: "background-color 0.2s"
                         }}
                       >
-                        <TableCell sx={{ fontWeight: 600 }}>{order.order_number}</TableCell>
-                        <TableCell>{order.waiter}</TableCell>
-                        <TableCell sx={{ color: order.customer_name ? "text.primary" : "text.secondary" }}>
+                        <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.875rem' }}>{order.order_number}</TableCell>
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem' }}>{order.waiter}</TableCell>
+                        <TableCell sx={{ color: order.customer_name ? "text.primary" : "text.secondary", py: 1.5, fontSize: '0.875rem' }}>
                           {order.customer_name || "Walk-in"}
                         </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" fontWeight={700}>
+                        <TableCell align="right" sx={{ py: 1.5 }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.875rem' }}>
                             {formatCurrency(order.total)}
                           </Typography>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1.5 }}>
                           <Chip
                             label={getDisplayStatus(order.status)}
                             color={getStatusColor(order.status)}
                             size="small"
-                            sx={{ fontWeight: 600 }}
+                            sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }}
                           />
                         </TableCell>
-                        <TableCell sx={{ fontSize: "0.875rem" }}>{formatDate(order.timestamp)}</TableCell>
-                        <TableCell align="center">
+                        <TableCell sx={{ fontSize: "0.875rem", py: 1.5 }}>{formatDate(order.timestamp)}</TableCell>
+                        <TableCell align="center" sx={{ py: 1.5 }}>
                           <IconButton
                             size="small"
                             onClick={() => handleViewOrder(order)}
                             sx={{ 
-                              color: "#000",
-                              "&:hover": { bgcolor: "rgba(0,0,0,0.08)" }
+                              color: "primary.main",
+                              "&:hover": { 
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : 'rgba(25, 118, 210, 0.08)',
+                                transform: 'scale(1.1)'
+                              },
+                              transition: 'all 0.2s'
                             }}
                           >
-                            <VisibilityIcon fontSize="small" />
+                            <VisibilityIcon sx={{ fontSize: '1.1rem' }} />
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -597,13 +624,13 @@ export default function OrdersPage() {
             {/* Pagination */}
             {pagination.totalPages > 1 && (
               <Box sx={{ 
-                p: 3, 
+                p: 2, 
                 display: "flex", 
                 justifyContent: "space-between", 
                 alignItems: "center",
                 borderTop: 1,
                 borderColor: "divider",
-                bgcolor: "#fafafa",
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#fafafa',
                 flexWrap: "wrap",
                 gap: 2
               }}>
@@ -620,10 +647,10 @@ export default function OrdersPage() {
                       fontWeight: 600
                     },
                     "& .Mui-selected": {
-                      bgcolor: "#000 !important",
-                      color: "#fff",
+                      bgcolor: theme.palette.mode === 'dark' ? 'primary.main !important' : '#000 !important',
+                      color: theme.palette.mode === 'dark' ? '#000 !important' : '#fff !important',
                       "&:hover": {
-                        bgcolor: "#1a1a1a !important"
+                        bgcolor: theme.palette.mode === 'dark' ? 'primary.dark !important' : '#1a1a1a !important'
                       }
                     }
                   }}
@@ -643,19 +670,20 @@ export default function OrdersPage() {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
+            boxShadow: theme.palette.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.1)',
+            bgcolor: 'background.paper'
           }
         }}
       >
         {selectedOrder && (
           <>
-            <DialogTitle sx={{ pb: 1.5, pt: 2.5, px: 3, borderBottom: 1, borderColor: "divider" }}>
+            <DialogTitle sx={{ pb: 1.5, pt: 2, px: 2.5, borderBottom: 1, borderColor: "divider" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Box>
-                  <Typography variant="h6" fontWeight={700}>
+                  <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.1rem' }}>
                     Order #{selectedOrder.order_number}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                     {formatDate(selectedOrder.timestamp)}
                   </Typography>
                 </Box>
@@ -663,35 +691,35 @@ export default function OrdersPage() {
                   label={getDisplayStatus(selectedOrder.status)}
                   color={getStatusColor(selectedOrder.status)}
                   size="small"
-                  sx={{ fontWeight: 600 }}
+                  sx={{ fontWeight: 600, fontSize: '0.7rem', height: 24 }}
                 />
               </Box>
             </DialogTitle>
             
-            <DialogContent sx={{ px: 3, py: 2.5 }}>
+            <DialogContent sx={{ px: 2.5, py: 2 }}>
               {/* Order Information */}
-              <Box sx={{ display: "flex", gap: 3, mb: 2.5, pb: 2.5, borderBottom: 1, borderColor: "divider" }}>
+              <Box sx={{ display: "flex", gap: 2, mb: 2, pb: 2, borderBottom: 1, borderColor: "divider" }}>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     Waiter
                   </Typography>
-                  <Typography variant="body2" fontWeight={600}>
+                  <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.875rem' }}>
                     {selectedOrder.waiter}
                   </Typography>
                 </Box>
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     Customer
                   </Typography>
-                  <Typography variant="body2" fontWeight={600} sx={{ color: selectedOrder.customer_name ? "text.primary" : "text.secondary" }}>
+                  <Typography variant="body2" fontWeight={600} sx={{ color: selectedOrder.customer_name ? "text.primary" : "text.secondary", fontSize: '0.875rem' }}>
                     {selectedOrder.customer_name || "Walk-in"}
                   </Typography>
                 </Box>
               </Box>
 
               {/* Order Items */}
-              <Box sx={{ mb: 2.5 }}>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, fontSize: '0.875rem' }}>
                   Items
                 </Typography>
                 <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
@@ -702,25 +730,27 @@ export default function OrdersPage() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        p: 1.5,
-                        bgcolor: index % 2 === 0 ? "#fafafa" : "#fff",
+                        p: 1.25,
+                        bgcolor: index % 2 === 0 
+                          ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#fafafa')
+                          : 'background.paper',
                         borderBottom: index < selectedOrder.orderItems.length - 1 ? 1 : 0,
                         borderColor: "divider"
                       }}
                     >
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" fontWeight={500}>
+                        <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.875rem' }}>
                           {item.itemName}
                         </Typography>
                       </Box>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 40, textAlign: "center" }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 40, textAlign: "center", fontSize: '0.8rem' }}>
                           × {item.quantity}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 80, textAlign: "right" }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 80, textAlign: "right", fontSize: '0.8rem' }}>
                           {formatCurrency(item.price)}
                         </Typography>
-                        <Typography variant="body2" fontWeight={600} sx={{ minWidth: 90, textAlign: "right" }}>
+                        <Typography variant="body2" fontWeight={600} sx={{ minWidth: 90, textAlign: "right", fontSize: '0.875rem' }}>
                           {formatCurrency(item.totalPrice)}
                         </Typography>
                       </Box>
@@ -734,15 +764,15 @@ export default function OrdersPage() {
                       justifyContent: "space-between",
                       alignItems: "center",
                       p: 1.5,
-                      bgcolor: "#f5f5f5",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5',
                       borderTop: 2,
                       borderColor: "divider"
                     }}
                   >
-                    <Typography variant="body1" fontWeight={700}>
+                    <Typography variant="body1" fontWeight={700} sx={{ fontSize: '0.95rem' }}>
                       Total
                     </Typography>
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.1rem' }}>
                       {formatCurrency(selectedOrder.total)}
                     </Typography>
                   </Box>
@@ -751,7 +781,7 @@ export default function OrdersPage() {
 
               {/* Status Update */}
               <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1, fontSize: '0.875rem' }}>
                   Update Status
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1.5 }}>
@@ -764,13 +794,13 @@ export default function OrdersPage() {
                       disabled={updatingStatus || selectedOrder.status === status}
                       fullWidth
                       sx={{
-                        py: 1,
+                        py: 0.875,
                         fontWeight: 600,
-                        fontSize: "0.875rem"
+                        fontSize: "0.8rem"
                       }}
                     >
                       {updatingStatus && selectedOrder.status !== status ? (
-                        <CircularProgress size={18} color="inherit" />
+                        <CircularProgress size={16} color="inherit" />
                       ) : (
                         getDisplayStatus(status)
                       )}
@@ -780,12 +810,13 @@ export default function OrdersPage() {
               </Box>
             </DialogContent>
             
-            <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: "divider" }}>
+            <DialogActions sx={{ px: 2.5, py: 1.5, borderTop: 1, borderColor: "divider" }}>
               <Button 
                 onClick={() => setDialogOpen(false)}
                 variant="text"
                 sx={{
                   fontWeight: 600,
+                  fontSize: '0.875rem',
                   color: "text.secondary"
                 }}
               >

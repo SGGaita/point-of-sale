@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Chip,
   Alert,
+  useTheme,
 } from "@mui/material";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
@@ -19,6 +20,7 @@ const drawerWidth = 260;
 
 export default function DashboardPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,7 @@ export default function DashboardPage() {
             alignItems: "center",
             justifyContent: "center",
             width: { md: `calc(100% - ${drawerWidth}px)` },
-            bgcolor: "#fafafa",
+            bgcolor: "background.default",
           }}
         >
           <CircularProgress />
@@ -135,7 +137,7 @@ export default function DashboardPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
         <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "1600px", width: "100%" }}>
@@ -158,17 +160,17 @@ export default function DashboardPage() {
           {stats && (
             <>
               {/* Today's Stats */}
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 3 }}>
-                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 2.5 }}>
+                <Box sx={{ flex: "1 1 160px", minWidth: "140px" }}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "success.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#f1f8f4",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4',
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "success.dark",
@@ -176,13 +178,13 @@ export default function DashboardPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: "0.7rem" }}>
                         Today's Revenue
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "success.main" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "success.main" }} />
                     </Box>
-                    <Typography variant="h3" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
+                    <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mb: 0.5 }}>
                       {formatCurrency(stats.todayStats.revenue)}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -198,16 +200,16 @@ export default function DashboardPage() {
                   </Paper>
                 </Box>
 
-                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                <Box sx={{ flex: "1 1 160px", minWidth: "140px" }}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "primary.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#e3f2fd",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd',
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "primary.dark",
@@ -215,13 +217,13 @@ export default function DashboardPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: "0.7rem" }}>
                         Today's Orders
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "primary.main" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main" }} />
                     </Box>
-                    <Typography variant="h3" fontWeight={700} color="primary.main" sx={{ mb: 0.5 }}>
+                    <Typography variant="h4" fontWeight={700} color="primary.main" sx={{ mb: 0.5 }}>
                       {stats.todayStats.orders}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -237,11 +239,11 @@ export default function DashboardPage() {
                   </Paper>
                 </Box>
 
-                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                <Box sx={{ flex: "1 1 160px", minWidth: "140px" }}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "divider",
                       borderRadius: 2,
@@ -253,13 +255,13 @@ export default function DashboardPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: "0.7rem" }}>
                         Total Products
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#9e9e9e" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#9e9e9e" }} />
                     </Box>
-                    <Typography variant="h3" fontWeight={700} sx={{ mb: 0.5 }}>
+                    <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>
                       {stats.overallStats.totalProducts}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
@@ -268,16 +270,16 @@ export default function DashboardPage() {
                   </Paper>
                 </Box>
 
-                <Box sx={{ flex: "1 1 200px", minWidth: "180px" }}>
+                <Box sx={{ flex: "1 1 160px", minWidth: "140px" }}>
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 2.5,
+                      p: 1.5,
                       border: 1,
                       borderColor: "error.main",
                       borderRadius: 2,
                       height: "100%",
-                      bgcolor: "#fef5f5",
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : '#fef5f5',
                       transition: "all 0.2s",
                       "&:hover": {
                         borderColor: "error.dark",
@@ -285,13 +287,13 @@ export default function DashboardPage() {
                       },
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, fontSize: "0.7rem" }}>
                         Unpaid Orders
                       </Typography>
-                      <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "error.main" }} />
+                      <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "error.main" }} />
                     </Box>
-                    <Typography variant="h3" fontWeight={700} color="error.main" sx={{ mb: 0.5 }}>
+                    <Typography variant="h4" fontWeight={700} color="error.main" sx={{ mb: 0.5 }}>
                       {stats.overallStats.pendingOrders}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
@@ -315,12 +317,12 @@ export default function DashboardPage() {
                           label="Click to clear selection"
                           size="small"
                           onDelete={() => setSelectedDay(null)}
-                          sx={{ bgcolor: "#e3f2fd" }}
+                          sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd' }}
                         />
                       )}
                     </Box>
                     {selectedDay && (
-                      <Box sx={{ mb: 2, p: 1.5, bgcolor: "#f1f8f4", borderRadius: 1, border: 1, borderColor: "success.light" }}>
+                      <Box sx={{ mb: 2, p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : '#f1f8f4', borderRadius: 1, border: 1, borderColor: "success.light" }}>
                         <Typography variant="caption" color="text.secondary" fontWeight={600}>
                           Selected: {selectedDay.date}
                         </Typography>
@@ -397,12 +399,12 @@ export default function DashboardPage() {
                           label="Click to clear selection"
                           size="small"
                           onDelete={() => setSelectedDay(null)}
-                          sx={{ bgcolor: "#e3f2fd" }}
+                          sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd' }}
                         />
                       )}
                     </Box>
                     {selectedDay && (
-                      <Box sx={{ mb: 2, p: 1.5, bgcolor: "#e3f2fd", borderRadius: 1, border: 1, borderColor: "primary.light" }}>
+                      <Box sx={{ mb: 2, p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : '#e3f2fd', borderRadius: 1, border: 1, borderColor: "primary.light" }}>
                         <Typography variant="caption" color="text.secondary" fontWeight={600}>
                           Selected: {selectedDay.date}
                         </Typography>
@@ -491,7 +493,7 @@ export default function DashboardPage() {
                             justifyContent: "space-between",
                             alignItems: "center",
                             p: 1.5,
-                            bgcolor: "#fafafa",
+                            bgcolor: theme.palette.mode === 'dark' ? 'background.card' : '#fafafa',
                             borderRadius: 1,
                             border: 1,
                             borderColor: "divider",
@@ -537,7 +539,7 @@ export default function DashboardPage() {
                             justifyContent: "space-between",
                             alignItems: "center",
                             p: 1.5,
-                            bgcolor: "#fafafa",
+                            bgcolor: theme.palette.mode === 'dark' ? 'background.card' : '#fafafa',
                             borderRadius: 1,
                             border: 1,
                             borderColor: "divider",

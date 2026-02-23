@@ -26,6 +26,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -46,6 +47,7 @@ const userRoles = [
 
 export default function StaffManagementPage() {
   const router = useRouter();
+  const theme = useTheme();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   
@@ -436,10 +438,10 @@ export default function StaffManagementPage() {
           display: "flex",
           flexDirection: "column",
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: "#fafafa",
+          bgcolor: "background.default",
         }}
       >
-        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1400px", width: "100%" }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: "1800px", width: "100%" }}>
           <Box sx={{ mb: 4 }}>
             <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
               Staff & User Management
@@ -466,38 +468,48 @@ export default function StaffManagementPage() {
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={handleOpenStaffDialog}
+                  sx={{
+                    px: 2.5,
+                    py: 1,
+                    fontSize: '0.875rem',
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a',
+                    }
+                  }}
                 >
                   Add Staff
                 </Button>
               </Box>
-              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
                 <Table>
-                  <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+                  <TableHead sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
                     <TableRow>
-                      <TableCell><strong>Name</strong></TableCell>
-                      <TableCell><strong>Position</strong></TableCell>
-                      <TableCell><strong>Contact</strong></TableCell>
-                      <TableCell><strong>Hire Date</strong></TableCell>
-                      <TableCell><strong>Status</strong></TableCell>
-                      <TableCell align="right"><strong>Actions</strong></TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Position</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Contact</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hire Date</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {staff.filter(s => s.is_active).map((member) => (
-                      <TableRow key={member.id} hover>
-                        <TableCell>{member.name}</TableCell>
-                        <TableCell>
-                          <Chip label={member.positions?.name || member.position_name || "N/A"} size="small" />
+                      <TableRow key={member.id} hover sx={{ '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem', fontWeight: 600 }}>{member.name}</TableCell>
+                        <TableCell sx={{ py: 1.5 }}>
+                          <Chip label={member.positions?.name || member.position_name || "N/A"} size="small" sx={{ fontSize: '0.7rem', height: 24 }} />
                         </TableCell>
-                        <TableCell>
-                          {member.email && <div>{member.email}</div>}
-                          {member.phone && <div style={{ fontSize: '0.875rem', color: '#666' }}>{member.phone}</div>}
+                        <TableCell sx={{ py: 1.5 }}>
+                          {member.email && <div style={{ fontSize: '0.875rem' }}>{member.email}</div>}
+                          {member.phone && <div style={{ fontSize: '0.8rem', color: theme.palette.text.secondary }}>{member.phone}</div>}
                         </TableCell>
-                        <TableCell>{member.hire_date ? new Date(member.hire_date).toLocaleDateString() : "N/A"}</TableCell>
-                        <TableCell>
-                          <Chip label="Active" color="success" size="small" />
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem' }}>{member.hire_date ? new Date(member.hire_date).toLocaleDateString() : "N/A"}</TableCell>
+                        <TableCell sx={{ py: 1.5 }}>
+                          <Chip label="Active" color="success" size="small" sx={{ fontSize: '0.7rem', height: 24, fontWeight: 600 }} />
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" sx={{ py: 1.5 }}>
                           <IconButton
                             size="small"
                             onClick={() => {
@@ -513,19 +525,34 @@ export default function StaffManagementPage() {
                               });
                               setOpenEditStaffDialog(true);
                             }}
+                            sx={{
+                              color: 'primary.main',
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.1)' : 'rgba(25, 118, 210, 0.08)',
+                                transform: 'scale(1.1)'
+                              },
+                              transition: 'all 0.2s'
+                            }}
                           >
-                            <EditIcon fontSize="small" />
+                            <EditIcon sx={{ fontSize: '1.1rem' }} />
                           </IconButton>
                           <IconButton
                             size="small"
-                            color="error"
                             onClick={() => {
                               setSelectedItem(member);
                               setDeleteType("staff");
                               setOpenDeleteDialog(true);
                             }}
+                            sx={{
+                              color: 'error.main',
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : 'rgba(211, 47, 47, 0.08)',
+                                transform: 'scale(1.1)'
+                              },
+                              transition: 'all 0.2s'
+                            }}
                           >
-                            <DeleteIcon fontSize="small" />
+                            <DeleteIcon sx={{ fontSize: '1.1rem' }} />
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -552,41 +579,52 @@ export default function StaffManagementPage() {
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={handleOpenUserDialog}
+                  sx={{
+                    px: 2.5,
+                    py: 1,
+                    fontSize: '0.875rem',
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a',
+                    }
+                  }}
                 >
                   Add User Account
                 </Button>
               </Box>
-              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
                 <Table>
-                  <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+                  <TableHead sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
                     <TableRow>
-                      <TableCell><strong>Name</strong></TableCell>
-                      <TableCell><strong>Email</strong></TableCell>
-                      <TableCell><strong>Role</strong></TableCell>
-                      <TableCell><strong>Status</strong></TableCell>
-                      <TableCell align="right"><strong>Actions</strong></TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Email</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Role</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {userAccounts.map((account) => (
-                      <TableRow key={account.id} hover>
-                        <TableCell>{account.name}</TableCell>
-                        <TableCell>{account.email}</TableCell>
-                        <TableCell>
+                      <TableRow key={account.id} hover sx={{ '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem', fontWeight: 600 }}>{account.name}</TableCell>
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem' }}>{account.email}</TableCell>
+                        <TableCell sx={{ py: 1.5 }}>
                           <Chip
                             label={getRoleLabel(account.role)}
-                            sx={{ bgcolor: getRoleColor(account.role), color: "#fff", fontWeight: 600 }}
+                            sx={{ bgcolor: getRoleColor(account.role), color: "#fff", fontWeight: 600, fontSize: '0.7rem', height: 24 }}
                             size="small"
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ py: 1.5 }}>
                           <Chip
                             label={account.isActive ? "Active" : "Inactive"}
                             color={account.isActive ? "success" : "default"}
                             size="small"
+                            sx={{ fontSize: '0.7rem', height: 24, fontWeight: 600 }}
                           />
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" sx={{ py: 1.5 }}>
                           <IconButton
                             size="small"
                             onClick={() => {
@@ -639,25 +677,35 @@ export default function StaffManagementPage() {
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={handleOpenPositionDialog}
+                  sx={{
+                    px: 2.5,
+                    py: 1,
+                    fontSize: '0.875rem',
+                    bgcolor: theme.palette.mode === 'dark' ? 'primary.main' : '#000',
+                    color: theme.palette.mode === 'dark' ? '#000' : '#fff',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'primary.dark' : '#1a1a1a',
+                    }
+                  }}
                 >
                   Add Position
                 </Button>
               </Box>
-              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
                 <Table>
-                  <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+                  <TableHead sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fafafa' }}>
                     <TableRow>
-                      <TableCell><strong>Position Name</strong></TableCell>
-                      <TableCell><strong>Description</strong></TableCell>
-                      <TableCell align="right"><strong>Actions</strong></TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Position Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Description</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {positions.map((position) => (
-                      <TableRow key={position.id} hover>
-                        <TableCell><strong>{position.name}</strong></TableCell>
-                        <TableCell>{position.description || "No description"}</TableCell>
-                        <TableCell align="right">
+                      <TableRow key={position.id} hover sx={{ '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.02)' } }}>
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem', fontWeight: 700 }}>{position.name}</TableCell>
+                        <TableCell sx={{ py: 1.5, fontSize: '0.875rem' }}>{position.description || "No description"}</TableCell>
+                        <TableCell align="right" sx={{ py: 1.5 }}>
                           <IconButton
                             size="small"
                             onClick={() => {
