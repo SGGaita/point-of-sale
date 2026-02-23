@@ -36,13 +36,44 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+-- User roles
+DO $$ BEGIN
+    CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'MANAGER', 'CASHIER', 'WAITER', 'CHEF', 'STOREKEEPER');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- =====================================================
 -- 2. CREATE CORE TABLES
 -- =====================================================
 
--- Users table (relies on Supabase auth.users)
--- Note: This assumes you're using Supabase authentication
--- The users table references will use TEXT type for user IDs
+-- Users table (Application users with authentication)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  password TEXT NOT NULL,
+  role "UserRole" NOT NULL DEFAULT 'CASHIER',
+  phone VARCHAR(50),
+  "isActive" BOOLEAN DEFAULT true,
+  "lastLogin" TIMESTAMP,
+  "loginCount" INTEGER DEFAULT 0,
+  "createdBy" TEXT,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Login History
+CREATE TABLE IF NOT EXISTS login_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  login_time TIMESTAMP NOT NULL DEFAULT NOW(),
+  logout_time TIMESTAMP,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  session_duration INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
 -- System Settings
 CREATE TABLE IF NOT EXISTS system_settings (
@@ -256,6 +287,13 @@ CREATE TABLE IF NOT EXISTS expenses (
 CREATE INDEX IF NOT EXISTS idx_settings_key ON system_settings(setting_key);
 CREATE INDEX IF NOT EXISTS idx_settings_category ON system_settings(category);
 
+-- Users and Authentication
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_history_time ON login_history(login_time);
+
 -- Staff and Positions
 CREATE INDEX IF NOT EXISTS idx_staff_position ON staff(position_id);
 CREATE INDEX IF NOT EXISTS idx_staff_active ON staff(is_active);
@@ -331,26 +369,37 @@ $$ LANGUAGE plpgsql;
 -- 8. CREATE TRIGGERS
 -- =====================================================
 
+-- Users
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at 
+BEFORE UPDATE ON users
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- System Settings
+DROP TRIGGER IF EXISTS update_system_settings_updated_at ON system_settings;
 CREATE TRIGGER update_system_settings_updated_at 
 BEFORE UPDATE ON system_settings
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Staff and Positions
+DROP TRIGGER IF EXISTS update_staff_updated_at ON staff;
 CREATE TRIGGER update_staff_updated_at 
 BEFORE UPDATE ON staff
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_positions_updated_at ON positions;
 CREATE TRIGGER update_positions_updated_at 
 BEFORE UPDATE ON positions
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Menu Items
+DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
 CREATE TRIGGER update_menu_items_updated_at 
 BEFORE UPDATE ON menu_items
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Orders
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
 CREATE TRIGGER update_orders_updated_at 
 BEFORE UPDATE ON orders
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -358,6 +407,11 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 -- =====================================================
 -- 9. INSERT DEFAULT DATA
 -- =====================================================
+
+-- Default Admin User (password: admin123 - CHANGE THIS IMMEDIATELY!)
+INSERT INTO users (id, email, name, password, role, "isActive") VALUES
+  ('admin-001', 'admin@restaurant.com', 'System Administrator', '$2b$10$29r1tcUnLXSvqXncJ/3c4.YSqLCWqWKce2wRvFZdIKJrzsQlK.JOW', 'ADMIN', true)
+ON CONFLICT (email) DO NOTHING;
 
 -- System Settings
 INSERT INTO system_settings (setting_key, setting_value, setting_type, category, label, description, is_editable) VALUES
@@ -447,7 +501,9 @@ ON CONFLICT DO NOTHING;
 -- =====================================================
 
 -- Count all tables
-SELECT 'system_settings' as table_name, COUNT(*) as row_count FROM system_settings
+SELECT 'users' as table_name, COUNT(*) as row_count FROM users
+UNION ALL SELECT 'login_history', COUNT(*) FROM login_history
+UNION ALL SELECT 'system_settings', COUNT(*) FROM system_settings
 UNION ALL SELECT 'positions', COUNT(*) FROM positions
 UNION ALL SELECT 'staff', COUNT(*) FROM staff
 UNION ALL SELECT 'inventory_items', COUNT(*) FROM inventory_items
