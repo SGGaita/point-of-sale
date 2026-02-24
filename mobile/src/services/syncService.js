@@ -3,7 +3,7 @@ import { Q } from '@nozbe/watermelondb';
 import { networkUtils } from '../utils/networkUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = process.env.APP_API_URL || 'https://pos-web-delta-opal.vercel.app';
+const API_BASE_URL = process.env.APP_API_URL || 'https://point-of-sale-8s19.vercel.app';
 const SYNC_STATUS_KEY = '@last_sync_status';
 const SYNC_TIMESTAMP_KEY = '@last_sync_timestamp';
 
@@ -26,13 +26,14 @@ export const syncService = {
     try {
       const items = await order.orderItems.fetch();
       
+      // Map mobile app fields to backend API fields
       return {
         orderNumber: order.orderNumber,
         waiter: order.waiter,
         customerName: order.customerName || null,
         total: order.total,
-        status: order.status,
-        timestamp: order.timestamp,
+        status: order.status, // API will map this to payment_status
+        timestamp: order.timestamp, // API will map this to order_date
         orderItems: items.map(item => ({
           itemName: item.itemName,
           price: item.price,

@@ -3,7 +3,7 @@ import { Q } from '@nozbe/watermelondb';
 import { networkUtils } from '../utils/networkUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = process.env.APP_API_URL || 'https://pos-web-delta-opal.vercel.app';
+const API_BASE_URL = process.env.APP_API_URL || 'https://point-of-sale-8s19.vercel.app';
 const MENU_SYNC_STATUS_KEY = '@menu_last_sync_status';
 const MENU_SYNC_TIMESTAMP_KEY = '@menu_last_sync_timestamp';
 

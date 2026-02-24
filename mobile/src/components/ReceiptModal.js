@@ -36,7 +36,7 @@ const ReceiptModal = ({visible, order, onClose, onPrint}) => {
           <ScrollView style={styles.receiptContent}>
             {/* Restaurant Info */}
             <View style={styles.restaurantSection}>
-              <Text style={styles.restaurantName}>DOSBROS KITCHEN</Text>
+              <Text style={styles.restaurantName}>KITCHEN POS</Text>
               <Text style={styles.restaurantSubtitle}>Hotel Restaurant</Text>
               <Text style={styles.restaurantLocation}>Nairobi, Kenya</Text>
             </View>

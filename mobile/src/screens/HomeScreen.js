@@ -252,7 +252,7 @@ const HomeScreen = () => {
         <body>
           <div class="receipt-container">
             <div class="header">
-              <div class="restaurant-name">DOSBROS KITCHEN</div>
+              <div class="restaurant-name">KITCHEN POS</div>
               <div class="restaurant-info">Hotel Restaurant</div>
               <div class="restaurant-info">Nairobi, Kenya</div>
             </div>
@@ -518,7 +518,7 @@ const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <Header 
-        restaurantName="DosBros Kitchen"
+        restaurantName="Kitchen POS"
         nextOrderNumber={getNextOrderNumber()}
         activeView={activeView}
         onMenuPress={handleMenuPress}

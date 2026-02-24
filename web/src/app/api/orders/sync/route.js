@@ -59,16 +59,23 @@ export async function POST(request) {
               .eq('order_id', existingOrder.id);
 
             // Insert new order items
-            const items = orderItems.map(item => ({
-              id: crypto.randomUUID(),
-              order_id: existingOrder.id,
-              item_name: item.itemName || item.item_name,
-              price: parseFloat(item.price),
-              quantity: parseInt(item.quantity),
-              total_price: parseFloat(item.totalPrice || item.total_price),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }));
+            const items = orderItems.map(item => {
+              const unitPrice = parseFloat(item.price || item.unit_price || 0);
+              const quantity = parseFloat(item.quantity || 0);
+              const totalAmount = parseFloat(item.totalPrice || item.total_price || item.total_amount || (unitPrice * quantity));
+              
+              return {
+                id: crypto.randomUUID(),
+                order_id: existingOrder.id,
+                item_name: item.itemName || item.item_name,
+                unit_price: unitPrice,
+                quantity: quantity,
+                subtotal: totalAmount,
+                tax_amount: 0,
+                total_amount: totalAmount,
+                created_at: new Date().toISOString(),
+              };
+            });
 
             const { error: itemsError } = await supabase
               .from('order_items')
@@ -100,16 +107,23 @@ export async function POST(request) {
 
           // Insert order items
           if (orderItems && Array.isArray(orderItems) && orderItems.length > 0) {
-            const items = orderItems.map(item => ({
-              id: crypto.randomUUID(),
-              order_id: orderId,
-              item_name: item.itemName || item.item_name,
-              price: parseFloat(item.price),
-              quantity: parseInt(item.quantity),
-              total_price: parseFloat(item.totalPrice || item.total_price),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }));
+            const items = orderItems.map(item => {
+              const unitPrice = parseFloat(item.price || item.unit_price || 0);
+              const quantity = parseFloat(item.quantity || 0);
+              const totalAmount = parseFloat(item.totalPrice || item.total_price || item.total_amount || (unitPrice * quantity));
+              
+              return {
+                id: crypto.randomUUID(),
+                order_id: orderId,
+                item_name: item.itemName || item.item_name,
+                unit_price: unitPrice,
+                quantity: quantity,
+                subtotal: totalAmount,
+                tax_amount: 0,
+                total_amount: totalAmount,
+                created_at: new Date().toISOString(),
+              };
+            });
 
             const { error: itemsError } = await supabase
               .from('order_items')

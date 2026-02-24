@@ -12,8 +12,7 @@ const SplashScreen = () => {
       end={{x: 1, y: 1}}
     >
       <View style={styles.content}>
-        <Text style={styles.appName}>Point of Sale</Text>
-        <Text style={styles.subtitle}>DosBros Kitchen</Text>
+        <Text style={styles.appName}>KITCHEN POS</Text>
         <ActivityIndicator 
           size="large" 
           color={colors.white} 
