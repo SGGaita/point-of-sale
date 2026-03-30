@@ -3,6 +3,7 @@ import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Activit
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows} from '../theme/theme';
 import {syncService} from '../services/syncService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DocumentPicker from 'react-native-document-picker';
 import XLSX from 'xlsx';
 import RNFS from 'react-native-fs';
@@ -11,8 +12,6 @@ import {excelImportService} from '../services/excelImportService';
 const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
-  const [syncing, setSyncing] = useState(false);
-  const [syncStats, setSyncStats] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
   const filters = [
@@ -22,50 +21,42 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) =
   ];
 
   useEffect(() => {
-    loadSyncStats();
-  }, [orders]);
+    loadLastSyncTime();
+    const interval = setInterval(loadLastSyncTime, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
-  const loadSyncStats = async () => {
+  const loadLastSyncTime = async () => {
     try {
-      const stats = await syncService.getSyncStats();
-      setSyncStats(stats);
-      if (stats.lastSyncTimestamp) {
-        setLastSyncTime(new Date(stats.lastSyncTimestamp));
+      const syncStatus = await AsyncStorage.getItem('orderSyncStatus');
+      if (syncStatus) {
+        const status = JSON.parse(syncStatus);
+        if (status.lastSyncTimestamp) {
+          setLastSyncTime(new Date(status.lastSyncTimestamp));
+        }
       }
     } catch (error) {
-      console.error('Error loading sync stats:', error);
+      console.error('Error loading last sync time:', error);
     }
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const result = await syncService.syncOrdersToBackend();
-      await loadSyncStats();
-      
-      if (result.success) {
-        Alert.alert(
-          'Sync Successful',
-          `${result.synced} order${result.synced !== 1 ? 's' : ''} synced to backend`,
-          [{text: 'OK'}]
-        );
-      } else {
-        Alert.alert(
-          'Sync Failed',
-          result.error || 'Failed to sync orders',
-          [{text: 'OK'}]
-        );
-      }
-    } catch (error) {
-      Alert.alert(
-        'Sync Error',
-        error.message || 'An error occurred while syncing',
-        [{text: 'OK'}]
-      );
-    } finally {
-      setSyncing(false);
-    }
+  const formatLastSync = () => {
+    if (!lastSyncTime) return 'Never synced';
+    
+    const now = new Date();
+    const diffMs = now - lastSyncTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   };
+
 
   const handleExportSalesData = async () => {
     const todayOrders = getFilteredOrders();
@@ -249,8 +240,6 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) =
         [{text: 'OK'}]
       );
 
-      // Reload sync stats after import
-      await loadSyncStats();
 
     } catch (error) {
       if (error.code !== 'DOCUMENT_PICKER_CANCELED') {
@@ -260,22 +249,6 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) =
     }
   };
 
-  const formatLastSync = () => {
-    if (!lastSyncTime) return 'Never synced';
-    
-    const now = new Date();
-    const diffMs = now - lastSyncTime;
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  };
 
   const getFilteredOrders = () => {
     let filtered = orders;
@@ -377,59 +350,6 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) =
   return (
     <View style={styles.container}>
       <ScrollView style={styles.mainScrollView} contentContainerStyle={styles.mainScrollContent}>
-        {/* Sync Status Section */}
-        <View style={styles.syncCard}>
-          <View style={styles.syncHeader}>
-            <View style={styles.syncInfo}>
-              <Icon name="cloud-sync" size={24} color={colors.primary} />
-              <View style={styles.syncTextContainer}>
-                <Text style={styles.syncTitle}>Sync Status</Text>
-                {syncStats && (
-                  <Text style={styles.syncSubtitle}>
-                    {syncStats.unsynced > 0 
-                      ? `${syncStats.unsynced} order${syncStats.unsynced !== 1 ? 's' : ''} pending sync`
-                      : 'All orders synced'}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[styles.syncButton, syncing && styles.syncButtonDisabled]}
-              onPress={handleSync}
-              disabled={syncing}
-            >
-              {syncing ? (
-                <ActivityIndicator color={colors.white} size="small" />
-              ) : (
-                <>
-                  <Icon name="sync" size={18} color={colors.white} />
-                  <Text style={styles.syncButtonText}>Sync</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-          {syncStats && (
-            <View style={styles.syncStatsRow}>
-              <View style={styles.syncStat}>
-                <Text style={styles.syncStatValue}>{syncStats.total}</Text>
-                <Text style={styles.syncStatLabel}>Total</Text>
-              </View>
-              <View style={styles.syncStat}>
-                <Text style={[styles.syncStatValue, {color: colors.success}]}>{syncStats.synced}</Text>
-                <Text style={styles.syncStatLabel}>Synced</Text>
-              </View>
-              <View style={styles.syncStat}>
-                <Text style={[styles.syncStatValue, {color: colors.warning}]}>{syncStats.unsynced}</Text>
-                <Text style={styles.syncStatLabel}>Pending</Text>
-              </View>
-              <View style={styles.syncStat}>
-                <Text style={styles.syncStatValue}>{formatLastSync()}</Text>
-                <Text style={styles.syncStatLabel}>Last Sync</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
         {/* Search and Filter Section */}
         <View style={styles.searchFilterCard}>
           {/* Search Field */}
@@ -472,23 +392,19 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) =
           </ScrollView>
         </View>
 
-        {/* Export and Import Buttons */}
-        <View style={styles.actionButtonsRow}>
-          <TouchableOpacity
-            style={[styles.actionButtonLarge, styles.exportButton]}
-            onPress={handleExportSalesData}
-          >
-            <Icon name="file-download" size={20} color={colors.white} />
-            <Text style={styles.actionButtonLargeText}>Export Sales Data</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionButtonLarge, styles.importButton]}
-            onPress={handleImportFromExcel}
-          >
-            <Icon name="file-upload" size={20} color={colors.white} />
-            <Text style={styles.actionButtonLargeText}>Import from Excel</Text>
-          </TouchableOpacity>
+        {/* Export Button */}
+        <TouchableOpacity
+          style={styles.exportButton}
+          onPress={handleExportSalesData}
+        >
+          <Icon name="file-download" size={20} color={colors.white} />
+          <Text style={styles.exportButtonText}>Export Sales Data</Text>
+        </TouchableOpacity>
+
+        {/* Last Synced Indicator */}
+        <View style={styles.syncStatusContainer}>
+          <Icon name="cloud-done" size={18} color={colors.success} />
+          <Text style={styles.syncStatusText}>Last synced: {formatLastSync()}</Text>
         </View>
 
         {/* Orders List */}
@@ -509,7 +425,25 @@ const OrdersView = ({orders = [], onMarkPaid, onPrintReceipt, onShowSnackbar}) =
           {borderLeftWidth: 5, borderLeftColor: getStatusBorderColor(order.status)}
         ]}>
           <View style={styles.orderHeader}>
-            <Text style={styles.orderNumber}>{order.orderNumber}</Text>
+            <View style={styles.orderHeaderLeft}>
+              <Text style={styles.orderNumber}>{order.orderNumber}</Text>
+              <View style={[
+                styles.syncBadge,
+                order.is_synced ? styles.syncBadgeSynced : styles.syncBadgeNotSynced
+              ]}>
+                <Icon 
+                  name={order.is_synced ? "cloud-done" : "cloud-off"} 
+                  size={12} 
+                  color={order.is_synced ? colors.success : colors.warning} 
+                />
+                <Text style={[
+                  styles.syncBadgeText,
+                  order.is_synced ? styles.syncBadgeTextSynced : styles.syncBadgeTextNotSynced
+                ]}>
+                  {order.is_synced ? 'Synced' : 'Not Synced'}
+                </Text>
+              </View>
+            </View>
             <Text style={[styles.orderStatus, {color: getStatusTextColor(order.status)}]}>
               {order.status === 'paid' ? 'Paid' : 'Unpaid'}
             </Text>
@@ -570,81 +504,6 @@ const styles = StyleSheet.create({
   },
   mainScrollContent: {
     paddingBottom: 16,
-  },
-  syncCard: {
-    backgroundColor: colors.white,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  syncHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  syncInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  syncTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  syncTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  syncSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  syncButtonDisabled: {
-    opacity: 0.6,
-  },
-  syncButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  syncStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  syncStat: {
-    alignItems: 'center',
-  },
-  syncStatValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  syncStatLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
   },
   searchFilterCard: {
     backgroundColor: colors.white,
@@ -718,6 +577,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  syncStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    gap: 8,
+  },
+  syncStatusText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -756,10 +632,39 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  orderHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   orderNumber: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.textPrimary,
+  },
+  syncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  syncBadgeSynced: {
+    backgroundColor: '#E8F5E9',
+  },
+  syncBadgeNotSynced: {
+    backgroundColor: '#FFF3E0',
+  },
+  syncBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  syncBadgeTextSynced: {
+    color: colors.success,
+  },
+  syncBadgeTextNotSynced: {
+    color: colors.warning,
   },
   orderStatus: {
     fontSize: 14,

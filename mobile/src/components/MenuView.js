@@ -3,11 +3,9 @@ import {View, TextInput, StyleSheet, ScrollView, TouchableOpacity, Text, Modal, 
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows, commonStyles} from '../theme/theme';
 import {menuService} from '../services/menuService';
-import {menuSyncService} from '../services/menuSyncService';
 import {waiterService} from '../services/waiterService';
 import {database} from '../database';
 import {Q} from '@nozbe/watermelondb';
-import {networkUtils} from '../utils/networkUtils';
 
 const MenuView = ({onCreateOrder, onError}) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,9 +26,6 @@ const MenuView = ({onCreateOrder, onError}) => {
   const [editingItem, setEditingItem] = useState(null);
   const [editItemName, setEditItemName] = useState('');
   const [editItemPrice, setEditItemPrice] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [syncStats, setSyncStats] = useState(null);
-  const [lastSyncTime, setLastSyncTime] = useState(null);
 
   const filters = [
     {id: 'all', label: 'All Items'},
@@ -43,28 +38,6 @@ const MenuView = ({onCreateOrder, onError}) => {
   useEffect(() => {
     loadMenuItems();
     loadWaiters();
-    loadSyncStats();
-    // Auto-sync on app load
-    handleSync();
-
-    // Subscribe to network changes to sync when internet becomes available
-    const unsubscribe = networkUtils.subscribeToNetworkChanges(async (isConnected) => {
-      if (isConnected) {
-        console.log('Internet connection restored. Checking for unsynced items...');
-        const stats = await menuSyncService.getSyncStats();
-        if (stats.unsynced > 0) {
-          console.log(`Found ${stats.unsynced} unsynced items. Triggering sync...`);
-          handleSync(true);
-        }
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
   }, []);
 
   const loadMenuItems = async () => {
@@ -112,75 +85,6 @@ const MenuView = ({onCreateOrder, onError}) => {
     }
   };
 
-  const loadSyncStats = async () => {
-    try {
-      const stats = await menuSyncService.getSyncStats();
-      setSyncStats(stats);
-      if (stats.lastSyncTimestamp) {
-        setLastSyncTime(new Date(stats.lastSyncTimestamp));
-      }
-    } catch (error) {
-      console.error('Error loading sync stats:', error);
-    }
-  };
-
-  const handleSync = async (silent = false) => {
-    // Check internet connection before attempting sync
-    const isConnected = await networkUtils.isConnected();
-    if (!isConnected) {
-      if (!silent) {
-        showSnackbar('No internet connection. Changes will sync when online.', 'info');
-      }
-      return;
-    }
-
-    setSyncing(true);
-    try {
-      const result = await menuSyncService.syncMenuItems();
-      await loadSyncStats();
-      await loadMenuItems();
-      
-      if (!silent && result.success) {
-        const message = [];
-        if (result.pushed > 0) message.push(`${result.pushed} pushed`);
-        if (result.pulled > 0) message.push(`${result.pulled} pulled`);
-        if (message.length > 0) {
-          showSnackbar(`Menu synced: ${message.join(', ')}`, 'success');
-        }
-      } else if (!silent && !result.success) {
-        showSnackbar(
-          result.error || 'Failed to sync menu',
-          'error'
-        );
-      }
-    } catch (error) {
-      if (!silent) {
-        showSnackbar(
-          error.message || 'An error occurred while syncing',
-          'error'
-        );
-      }
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const formatLastSync = () => {
-    if (!lastSyncTime) return 'Never synced';
-    
-    const now = new Date();
-    const diffMs = now - lastSyncTime;
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  };
 
   const getFilteredItems = () => {
     let items = [...menuItems, ...customItems];
@@ -263,9 +167,6 @@ const MenuView = ({onCreateOrder, onError}) => {
         
         // Show success message
         showSnackbar('Item added to menu successfully', 'success');
-        
-        // Auto-sync after adding item
-        handleSync(true);
       } catch (error) {
         console.error('Error adding custom item:', error);
         showSnackbar('Failed to add item to menu', 'error');
@@ -314,9 +215,6 @@ const MenuView = ({onCreateOrder, onError}) => {
         setEditItemPrice('');
         
         showSnackbar('Item updated successfully', 'success');
-        
-        // Auto-sync after updating item
-        handleSync(true);
       } catch (error) {
         console.error('Error updating item:', error);
         showSnackbar('Failed to update item', 'error');
@@ -391,14 +289,6 @@ const MenuView = ({onCreateOrder, onError}) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Sync Status Indicator (Minimal) */}
-      {syncing && (
-        <View style={styles.syncIndicator}>
-          <ActivityIndicator color={colors.primary} size="small" />
-          <Text style={styles.syncIndicatorText}>Syncing menu...</Text>
-        </View>
-      )}
-
       {/* Card Container for Search and Filters */}
       <View style={styles.cardContainer}>
         {/* Search Field */}

@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius} from '../theme/theme';
 import {expenseTemplateService} from '../services/expenseTemplateService';
@@ -16,6 +17,13 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Food Supplies');
   const [currentDate, setCurrentDate] = useState(new Date().toDateString());
+  const [expandedExpenseGroups, setExpandedExpenseGroups] = useState({});
+  const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editQuantity, setEditQuantity] = useState('');
+  const [editUnitCost, setEditUnitCost] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const autoSaveTimers = React.useRef({}).current;
 
   const categories = [
@@ -27,7 +35,13 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
   useEffect(() => {
     loadTemplates();
     loadStaff();
+    loadTemplateInputs();
   }, []);
+
+  // Save template inputs to AsyncStorage whenever they change
+  useEffect(() => {
+    saveTemplateInputs();
+  }, [templateInputs]);
 
   // Check for day change and clear inputs
   useEffect(() => {
@@ -36,6 +50,7 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
       if (today !== currentDate) {
         // Day has changed, clear all inputs
         setTemplateInputs({});
+        AsyncStorage.removeItem('expenseTemplateInputs');
         setCurrentDate(today);
       }
     }, 60000); // Check every minute
@@ -60,6 +75,25 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
       setStaffList(waiters);
     } catch (error) {
       console.error('Error loading staff:', error);
+    }
+  };
+
+  const loadTemplateInputs = async () => {
+    try {
+      const savedInputs = await AsyncStorage.getItem('expenseTemplateInputs');
+      if (savedInputs) {
+        setTemplateInputs(JSON.parse(savedInputs));
+      }
+    } catch (error) {
+      console.error('Error loading template inputs:', error);
+    }
+  };
+
+  const saveTemplateInputs = async () => {
+    try {
+      await AsyncStorage.setItem('expenseTemplateInputs', JSON.stringify(templateInputs));
+    } catch (error) {
+      console.error('Error saving template inputs:', error);
     }
   };
 
@@ -101,49 +135,53 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
   };
 
   const handleTemplateInput = (templateId, field, value) => {
-    setTemplateInputs(prev => {
-      const updated = {
-        ...prev,
-        [templateId]: {
-          ...prev[templateId],
-          [field]: value,
-        },
-      };
-      
-      // Auto-save when both fields are filled
-      const input = updated[templateId];
-      if (input.quantity && input.unitCost) {
-        // Debounce the auto-save
-        if (autoSaveTimers[templateId]) {
-          clearTimeout(autoSaveTimers[templateId]);
-        }
-        
-        autoSaveTimers[templateId] = setTimeout(() => {
-          autoSaveExpense(templateId, input);
-        }, 1000);
-      }
-      
-      return updated;
-    });
+    setTemplateInputs(prev => ({
+      ...prev,
+      [templateId]: {
+        ...prev[templateId],
+        [field]: value,
+      },
+    }));
   };
 
   const handleAddTemplateExpense = async (template) => {
     const input = templateInputs[template.id];
     
-    if (!input || !input.quantity || !input.unitCost) {
-      onShowSnackbar && onShowSnackbar('Please enter both quantity and unit cost', 'error');
+    if (!input) {
+      onShowSnackbar && onShowSnackbar('Please enter expense details', 'error');
       return;
     }
 
-    const quantity = parseFloat(input.quantity);
-    const unitCost = parseFloat(input.unitCost);
-    
-    if (isNaN(quantity) || isNaN(unitCost) || quantity <= 0 || unitCost <= 0) {
-      onShowSnackbar && onShowSnackbar('Please enter valid numbers', 'error');
-      return;
-    }
+    let amount, quantity, unitCost;
 
-    const amount = quantity * unitCost;
+    if (template.unit === 'Ksh') {
+      // Single field: just amount
+      if (!input.amount) {
+        onShowSnackbar && onShowSnackbar('Please enter amount', 'error');
+        return;
+      }
+      amount = parseFloat(input.amount);
+      if (isNaN(amount) || amount <= 0) {
+        onShowSnackbar && onShowSnackbar('Please enter a valid amount', 'error');
+        return;
+      }
+      quantity = null;
+      unitCost = null;
+    } else {
+      // Two fields: quantity × unitCost
+      if (!input.quantity || !input.unitCost) {
+        onShowSnackbar && onShowSnackbar('Please enter both quantity and unit cost', 'error');
+        return;
+      }
+      quantity = parseFloat(input.quantity);
+      unitCost = parseFloat(input.unitCost);
+      
+      if (isNaN(quantity) || isNaN(unitCost) || quantity <= 0 || unitCost <= 0) {
+        onShowSnackbar && onShowSnackbar('Please enter valid numbers', 'error');
+        return;
+      }
+      amount = quantity * unitCost;
+    }
 
     const expenseData = {
       templateId: template.id,
@@ -157,11 +195,26 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
 
     onAddExpense && onAddExpense(expenseData);
     
-    // Clear inputs for this template
-    setTemplateInputs(prev => ({
-      ...prev,
-      [template.id]: { quantity: '', unitCost: '' },
-    }));
+    // Auto-increment quantity only if this template already has entries today (subsequent entries)
+    // Check if there are existing expenses for this template today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.timestamp);
+      expenseDate.setHours(0, 0, 0, 0);
+      return expenseDate.getTime() === today.getTime() && expense.description === template.name;
+    });
+    
+    // Only increment if there's at least one existing entry for this template today
+    if (template.unit !== 'Ksh' && quantity && todayExpenses.length > 0) {
+      setTemplateInputs(prev => ({
+        ...prev,
+        [template.id]: {
+          ...prev[template.id],
+          quantity: String(quantity + 1),
+        },
+      }));
+    }
 
     onShowSnackbar && onShowSnackbar(`${template.name} added: ${amount} Ksh`, 'success');
   };
@@ -244,6 +297,103 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
       }));
     }
     return templates.filter(t => t.category === activeCategory);
+  };
+
+  const getGroupedExpenses = () => {
+    const grouped = {};
+    
+    todayExpenses.forEach(expense => {
+      const key = expense.description;
+      if (!grouped[key]) {
+        grouped[key] = {
+          description: expense.description,
+          category: expense.category,
+          entries: [],
+          totalAmount: 0,
+          count: 0,
+        };
+      }
+      grouped[key].entries.push(expense);
+      grouped[key].totalAmount += expense.amount;
+      grouped[key].count += 1;
+    });
+    
+    return Object.values(grouped).sort((a, b) => b.totalAmount - a.totalAmount);
+  };
+
+  const toggleExpenseGroup = (description) => {
+    setExpandedExpenseGroups(prev => ({
+      ...prev,
+      [description]: !prev[description]
+    }));
+  };
+
+  const handleEditExpense = (expense) => {
+    setEditingExpense(expense);
+    setEditDescription(expense.description);
+    
+    if (expense.quantity) {
+      setEditQuantity(String(expense.quantity));
+      setEditUnitCost(String(expense.unitCost));
+      setEditAmount('');
+    } else {
+      setEditQuantity('');
+      setEditUnitCost('');
+      setEditAmount(String(expense.amount));
+    }
+    
+    setShowEditExpenseModal(true);
+  };
+
+  const handleUpdateExpense = async () => {
+    if (!editingExpense) return;
+
+    let amount, quantity, unitCost;
+
+    // Determine if this is a quantity-based or amount-based expense
+    if (editQuantity && editUnitCost) {
+      quantity = parseFloat(editQuantity);
+      unitCost = parseFloat(editUnitCost);
+      
+      if (isNaN(quantity) || isNaN(unitCost) || quantity <= 0 || unitCost <= 0) {
+        onShowSnackbar && onShowSnackbar('Please enter valid numbers', 'error');
+        return;
+      }
+      amount = quantity * unitCost;
+    } else if (editAmount) {
+      amount = parseFloat(editAmount);
+      if (isNaN(amount) || amount <= 0) {
+        onShowSnackbar && onShowSnackbar('Please enter a valid amount', 'error');
+        return;
+      }
+      quantity = null;
+      unitCost = null;
+    } else {
+      onShowSnackbar && onShowSnackbar('Please enter expense details', 'error');
+      return;
+    }
+
+    const updatedExpense = {
+      id: editingExpense.id,
+      description: editDescription.trim(),
+      quantity,
+      unitCost,
+      amount,
+      category: editingExpense.category,
+      templateId: editingExpense.templateId,
+      timestamp: editingExpense.timestamp,
+    };
+
+    onUpdateExpense && onUpdateExpense(updatedExpense);
+    
+    setShowEditExpenseModal(false);
+    setEditingExpense(null);
+    setEditDescription('');
+    setEditQuantity('');
+    setEditUnitCost('');
+    setEditAmount('');
+
+    onShowSnackbar && onShowSnackbar('Expense updated successfully', 'success');
   };
 
   const todayExpenses = getTodayExpenses();
@@ -358,6 +508,16 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
                         <Text style={styles.totalText}>{calculatedTotal} Ksh</Text>
                       </View>
                     )}
+                    <TouchableOpacity
+                      style={[
+                        styles.addTemplateButton,
+                        calculatedTotal <= 0 && styles.addTemplateButtonDisabled
+                      ]}
+                      onPress={() => handleAddTemplateExpense(template)}
+                      disabled={calculatedTotal <= 0}
+                    >
+                      <Icon name="add" size={18} color={colors.white} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               );
@@ -400,29 +560,77 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
               <Text style={styles.emptyStateText}>No expenses recorded today</Text>
             </View>
           ) : (
-            todayExpenses.map((expense) => (
-              <View key={expense.id} style={styles.expenseItem}>
-                <View style={styles.expenseLeft}>
-                  <Text style={styles.expenseDescription}>{expense.description}</Text>
-                  <Text style={styles.expenseDetails}>
-                    {expense.category}
-                    {expense.quantity && ` • ${expense.quantity} × ${expense.unitCost} Ksh`}
-                  </Text>
-                  <Text style={styles.expenseTime}>
-                    {formatTime(expense.timestamp)}
-                  </Text>
-                </View>
-                <View style={styles.expenseRight}>
-                  <Text style={styles.expenseAmount}>{expense.amount} Ksh</Text>
+            getGroupedExpenses().map((group) => {
+              const isExpanded = expandedExpenseGroups[group.description];
+              
+              return (
+                <View key={group.description}>
                   <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => onDeleteExpense && onDeleteExpense(expense.id)}
+                    style={styles.expenseGroupItem}
+                    onPress={() => toggleExpenseGroup(group.description)}
+                    activeOpacity={0.7}
                   >
-                    <Icon name="delete" size={18} color={colors.danger} />
+                    <View style={styles.expenseLeft}>
+                      <Text style={styles.expenseDescription}>
+                        {group.description}
+                        {group.count > 1 && (
+                          <Text style={styles.expenseCount}> x{group.count}</Text>
+                        )}
+                      </Text>
+                      <Text style={styles.expenseDetails}>{group.category}</Text>
+                    </View>
+                    <View style={styles.expenseRight}>
+                      <Text style={styles.expenseAmount}>{group.totalAmount} Ksh</Text>
+                      <Icon 
+                        name={isExpanded ? "expand-less" : "expand-more"} 
+                        size={24} 
+                        color={colors.textSecondary} 
+                      />
+                    </View>
                   </TouchableOpacity>
+                  
+                  {isExpanded && (
+                    <View style={styles.expenseEntriesContainer}>
+                      {/* Table Headings */}
+                      <View style={styles.expenseEntryHeader}>
+                        <Text style={styles.expenseEntryHeaderText}>Time</Text>
+                        <Text style={styles.expenseEntryHeaderText}>Cost</Text>
+                      </View>
+                      
+                      {group.entries.map((expense) => (
+                        <View key={expense.id} style={styles.expenseEntry}>
+                          <View style={styles.expenseEntryLeft}>
+                            <Text style={styles.expenseEntryTime}>
+                              {formatTime(expense.timestamp)}
+                            </Text>
+                            {expense.quantity && (
+                              <Text style={styles.expenseEntryDetails}>
+                                {expense.quantity} × {expense.unitCost} Ksh
+                              </Text>
+                            )}
+                          </View>
+                          <View style={styles.expenseEntryRight}>
+                            <Text style={styles.expenseEntryAmount}>{expense.amount} Ksh</Text>
+                            <TouchableOpacity
+                              style={styles.editButton}
+                              onPress={() => handleEditExpense(expense)}
+                            >
+                              <Icon name="edit" size={16} color={colors.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.deleteButton}
+                              onPress={() => onDeleteExpense && onDeleteExpense(expense.id)}
+                            >
+                              <Icon name="delete" size={16} color={colors.danger} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -511,6 +719,96 @@ const ExpensesViewNew = ({expenses = [], onAddExpense, onUpdateExpense, onDelete
                 disabled={!customDescription.trim() || !customAmount.trim()}
               >
                 <Text style={styles.addButtonText}>Add Expense</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Expense Modal */}
+      <Modal
+        visible={showEditExpenseModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditExpenseModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Expense</Text>
+              <TouchableOpacity onPress={() => setShowEditExpenseModal(false)}>
+                <Icon name="close" size={24} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Enter expense description"
+                placeholderTextColor={colors.placeholder}
+                value={editDescription}
+                onChangeText={setEditDescription}
+              />
+
+              {editingExpense && editingExpense.quantity ? (
+                <>
+                  <Text style={[styles.inputLabel, {marginTop: 16}]}>Quantity</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter quantity"
+                    placeholderTextColor={colors.placeholder}
+                    value={editQuantity}
+                    onChangeText={setEditQuantity}
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={[styles.inputLabel, {marginTop: 16}]}>Unit Cost (Ksh)</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter unit cost"
+                    placeholderTextColor={colors.placeholder}
+                    value={editUnitCost}
+                    onChangeText={setEditUnitCost}
+                    keyboardType="numeric"
+                  />
+
+                  {editQuantity && editUnitCost && (
+                    <View style={styles.calculatedTotalContainer}>
+                      <Text style={styles.calculatedTotalLabel}>Total:</Text>
+                      <Text style={styles.calculatedTotalValue}>
+                        {parseFloat(editQuantity) * parseFloat(editUnitCost)} Ksh
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.inputLabel, {marginTop: 16}]}>Amount (Ksh)</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter amount"
+                    placeholderTextColor={colors.placeholder}
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    keyboardType="numeric"
+                  />
+                </>
+              )}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowEditExpenseModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.addButton]}
+                onPress={handleUpdateExpense}
+              >
+                <Text style={styles.addButtonText}>Update</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -708,6 +1006,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
+  expenseGroupItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
   expenseLeft: {
     flex: 1,
   },
@@ -716,6 +1021,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 4,
+  },
+  expenseCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
   expenseDetails: {
     fontSize: 12,
@@ -729,15 +1039,92 @@ const styles = StyleSheet.create({
   expenseRight: {
     alignItems: 'flex-end',
     justifyContent: 'space-between',
+    flexDirection: 'row',
+    gap: 8,
   },
   expenseAmount: {
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.danger,
-    marginBottom: 8,
   },
   deleteButton: {
     padding: 4,
+  },
+  editButton: {
+    padding: 4,
+  },
+  calculatedTotalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.success + '15',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: colors.success + '40',
+  },
+  calculatedTotalLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  calculatedTotalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.success,
+  },
+  expenseEntriesContainer: {
+    backgroundColor: colors.inputBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+    borderRadius: 6,
+  },
+  expenseEntryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+    marginBottom: 4,
+  },
+  expenseEntryHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  expenseEntry: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  expenseEntryLeft: {
+    flex: 1,
+  },
+  expenseEntryTime: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  expenseEntryDetails: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  expenseEntryRight: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  expenseEntryAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.danger,
   },
   modalOverlay: {
     flex: 1,
@@ -848,6 +1235,19 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
     fontWeight: '600',
+  },
+  addTemplateButton: {
+    backgroundColor: colors.success,
+    borderRadius: 6,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  addTemplateButtonDisabled: {
+    backgroundColor: colors.border,
+    opacity: 0.5,
   },
 });
 

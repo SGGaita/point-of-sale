@@ -33,23 +33,6 @@ const SyncStatus = () => {
     setIsConnected(connected);
   };
 
-  const handleManualSync = async () => {
-    setIsSyncing(true);
-    try {
-      const result = await syncService.syncOrdersToBackend();
-      await loadSyncStats();
-      
-      if (result.success) {
-        alert(`Sync successful! ${result.synced} orders synced.`);
-      } else {
-        alert(`Sync failed: ${result.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      alert(`Sync error: ${error.message}`);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const formatLastSync = () => {
     if (!lastSyncTime) return 'Never';
@@ -96,19 +79,6 @@ const SyncStatus = () => {
         </View>
       )}
 
-      <TouchableOpacity
-        style={[styles.syncButton, (!isConnected || isSyncing) && styles.syncButtonDisabled]}
-        onPress={handleManualSync}
-        disabled={!isConnected || isSyncing}
-      >
-        {isSyncing ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.syncButtonText}>
-            {isConnected ? 'Sync Now' : 'No Connection'}
-          </Text>
-        )}
-      </TouchableOpacity>
     </View>
   );
 };
@@ -171,20 +141,6 @@ const styles = StyleSheet.create({
   },
   pending: {
     color: '#FF9800',
-  },
-  syncButton: {
-    backgroundColor: '#2196F3',
-    padding: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  syncButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  syncButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

@@ -137,6 +137,14 @@ export const expenseTemplateService = {
       { name: 'Cooking Gas', category: 'Utilities', unit: 'Ksh', sortOrder: 25 },
       { name: 'Packaging', category: 'Utilities', unit: 'Ksh', sortOrder: 26 },
       { name: 'Soap', category: 'Utilities', unit: 'Ksh', sortOrder: 27 },
+      { name: 'Austine', category: 'Staff Costs', unit: 'Ksh', sortOrder: 28 },
+      { name: 'Peter', category: 'Staff Costs', unit: 'Ksh', sortOrder: 29 },
+      { name: 'Nyambura', category: 'Staff Costs', unit: 'Ksh', sortOrder: 30 },
+      { name: 'Noora', category: 'Staff Costs', unit: 'Ksh', sortOrder: 31 },
+      { name: 'Jasmine', category: 'Staff Costs', unit: 'Ksh', sortOrder: 32 },
+      { name: 'Mercy', category: 'Staff Costs', unit: 'Ksh', sortOrder: 33 },
+      { name: 'Charity', category: 'Staff Costs', unit: 'Ksh', sortOrder: 34 },
+      { name: 'Metrine', category: 'Staff Costs', unit: 'Ksh', sortOrder: 35 },
     ];
 
     await database.write(async () => {

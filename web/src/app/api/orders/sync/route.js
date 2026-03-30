@@ -190,7 +190,16 @@ export async function GET(request) {
 
     // Transform order_items to match expected format
     const transformedOrders = orders?.map(order => ({
-      ...order,
+      id: order.id,
+      orderNumber: order.order_number,
+      waiter: order.waiter,
+      customerName: order.customer_name,
+      total: order.total,
+      status: order.status,
+      timestamp: order.timestamp,
+      syncedAt: order.synced_at,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
       orderItems: order.order_items?.map(item => ({
         id: item.id,
         itemName: item.item_name,

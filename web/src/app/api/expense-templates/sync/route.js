@@ -1,17 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-let supabaseInstance = null;
-
-function getSupabase() {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseInstance;
-}
+import supabase from '@/lib/supabase';
 
 export async function POST(request) {
   try {
@@ -41,7 +29,7 @@ export async function POST(request) {
         };
 
         // Check if template exists by name and category
-        const { data: existingTemplate } = await getSupabase()
+        const { data: existingTemplate } = await supabase
           .from('expense_templates')
           .select('id')
           .eq('name', templateData.name)
@@ -50,7 +38,7 @@ export async function POST(request) {
 
         if (existingTemplate) {
           // Update existing template
-          const { error: updateError } = await getSupabase()
+          const { error: updateError } = await supabase
             .from('expense_templates')
             .update(templateData)
             .eq('id', existingTemplate.id);
@@ -59,7 +47,7 @@ export async function POST(request) {
           results.push({ id: template.id, status: 'updated' });
         } else {
           // Insert new template
-          const { error: insertError } = await getSupabase()
+          const { error: insertError } = await supabase
             .from('expense_templates')
             .insert([templateData]);
 
@@ -93,7 +81,7 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const { data: templates, error } = await getSupabase()
+    const { data: templates, error } = await supabase
       .from('expense_templates')
       .select('*')
       .eq('is_active', true)

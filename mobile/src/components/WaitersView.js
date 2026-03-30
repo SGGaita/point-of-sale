@@ -10,6 +10,7 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
   const [newWaiterName, setNewWaiterName] = useState('');
   const [expandedWaiter, setExpandedWaiter] = useState(null);
   const [customerNames, setCustomerNames] = useState({});
+  const [expandedPaidOrders, setExpandedPaidOrders] = useState({});
 
   const filters = [
     {id: 'all', label: 'All Waiters'},
@@ -36,6 +37,13 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
       : order.customerName || '';
   };
 
+  const togglePaidOrderExpansion = (orderId) => {
+    setExpandedPaidOrders(prev => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
+  };
+
   const getWaiterStats = (waiterName) => {
     // Filter by current date (only show today's orders)
     const today = new Date();
@@ -53,6 +61,10 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
     const paidOrdersList = waiterOrders.filter(order => order.status === 'paid');
     const unpaidOrdersList = waiterOrders.filter(order => order.status === 'unpaid' || order.status === 'pending');
     const totalRevenue = paidOrdersList.reduce((sum, order) => sum + order.total, 0);
+
+    // Sort orders by order number (ascending)
+    paidOrdersList.sort((a, b) => a.orderNumber.localeCompare(b.orderNumber));
+    unpaidOrdersList.sort((a, b) => a.orderNumber.localeCompare(b.orderNumber));
 
     return {
       totalOrders,
@@ -206,17 +218,69 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
                     {stats.paidOrdersList.length > 0 && (
                       <View style={styles.ordersSection}>
                         <Text style={styles.ordersSectionTitle}>Paid Orders ({stats.paidOrdersList.length})</Text>
-                        {stats.paidOrdersList.map((order) => (
-                          <View key={order.id} style={styles.orderRow}>
-                            <View style={styles.orderRowLeft}>
-                              <Text style={styles.orderNumber}>{order.orderNumber}</Text>
-                              {order.customerName && (
-                                <Text style={styles.orderCustomer}>{order.customerName}</Text>
+                        {stats.paidOrdersList.map((order) => {
+                          const isExpanded = expandedPaidOrders[order.id];
+                          return (
+                            <TouchableOpacity 
+                              key={order.id} 
+                              style={styles.orderRowClickable}
+                              onPress={() => togglePaidOrderExpansion(order.id)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.orderRowTop}>
+                                <View style={styles.orderRowLeft}>
+                                  <Text style={styles.orderNumber}>{order.orderNumber}</Text>
+                                  {order.customerName && !isExpanded && (
+                                    <Text style={styles.orderCustomer}>{order.customerName}</Text>
+                                  )}
+                                </View>
+                                <Text style={styles.orderAmount}>{order.total} Ksh</Text>
+                              </View>
+                              
+                              {isExpanded && (
+                                <View style={styles.paidOrderDetails}>
+                                  {order.customerName && (
+                                    <View style={styles.orderDetailRow}>
+                                      <Icon name="person" size={14} color={colors.textSecondary} />
+                                      <Text style={styles.orderDetailText}>{order.customerName}</Text>
+                                    </View>
+                                  )}
+                                  <View style={styles.orderDetailRow}>
+                                    <Icon name="access-time" size={14} color={colors.textSecondary} />
+                                    <Text style={styles.orderDetailText}>
+                                      {new Date(order.timestamp).toLocaleDateString()} {new Date(order.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                    </Text>
+                                  </View>
+                                  
+                                  {/* Order Items Breakdown */}
+                                  {order.items && order.items.length > 0 && (
+                                    <View style={styles.orderItemsBreakdown}>
+                                      {order.items.map((item, index) => (
+                                        <View key={index} style={styles.orderItemRow}>
+                                          <Text style={styles.orderItemName}>
+                                            {item.name} x{item.quantity}
+                                          </Text>
+                                          <Text style={styles.orderItemPrice}>{item.totalPrice} Ksh</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  )}
+                                  
+                                  <TouchableOpacity
+                                    style={styles.receiptBtn}
+                                    onPress={(e) => {
+                                      e.stopPropagation();
+                                      onPrintReceipt && onPrintReceipt(order);
+                                    }}
+                                  >
+                                    <Icon name="print" size={16} color={colors.white} />
+                                    <Text style={styles.actionBtnText}>Print Receipt</Text>
+                                  </TouchableOpacity>
+                                </View>
                               )}
-                            </View>
-                            <Text style={styles.orderAmount}>{order.total} Ksh</Text>
-                          </View>
-                        ))}
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     )}
 
@@ -533,6 +597,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 6,
     marginBottom: 8,
+  },
+  orderRowClickable: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.background,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  paidOrderDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  orderDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
+  orderDetailText: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   orderRowWithActions: {
     paddingVertical: 8,

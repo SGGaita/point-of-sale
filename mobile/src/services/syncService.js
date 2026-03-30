@@ -116,8 +116,15 @@ export const syncService = {
         });
       }
 
+      // Save sync status for both old and new keys
       await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify(result));
       await AsyncStorage.setItem(SYNC_TIMESTAMP_KEY, Date.now().toString());
+      
+      // Also save in format expected by OrdersView
+      await AsyncStorage.setItem('orderSyncStatus', JSON.stringify({
+        ...result,
+        lastSyncTimestamp: Date.now()
+      }));
 
       console.log(`Sync completed: ${result.synced} synced, ${result.failed} failed`);
       
@@ -150,6 +157,94 @@ export const syncService = {
     } catch (error) {
       console.error('Error getting last sync status:', error);
       return { status: null, timestamp: null };
+    }
+  },
+
+  async pullOrdersFromServer() {
+    try {
+      const isConnected = await networkUtils.isConnected();
+      if (!isConnected) {
+        console.log('No internet connection. Pull skipped.');
+        return { success: false, error: 'No internet connection', pulled: 0 };
+      }
+
+      console.log('Pulling orders from:', `${API_BASE_URL}/api/orders/sync`);
+      
+      const response = await fetch(`${API_BASE_URL}/api/orders/sync`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Pull failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const remoteOrders = result.orders || [];
+      
+      console.log(`Pulled ${remoteOrders.length} orders from server`);
+
+      if (remoteOrders.length === 0) {
+        return { success: true, pulled: 0, updated: 0, created: 0 };
+      }
+
+      const ordersCollection = database.collections.get('orders');
+      const orderItemsCollection = database.collections.get('order_items');
+      let markedAsSynced = 0;
+      let created = 0;
+
+      await database.write(async () => {
+        for (const remoteOrder of remoteOrders) {
+          let existingOrders = [];
+
+          // Try to match by orderNumber if available
+          if (remoteOrder.orderNumber) {
+            existingOrders = await ordersCollection
+              .query(Q.where('order_number', remoteOrder.orderNumber))
+              .fetch();
+          } else if (remoteOrder.timestamp && remoteOrder.total) {
+            // Fallback: match by timestamp and total if orderNumber is null
+            const orderTimestamp = new Date(remoteOrder.timestamp).getTime();
+            const allOrders = await ordersCollection.query().fetch();
+            
+            existingOrders = allOrders.filter(order => {
+              const localTimestamp = new Date(order.timestamp).getTime();
+              const timeDiff = Math.abs(localTimestamp - orderTimestamp);
+              // Match if timestamp within 1 second and total matches
+              return timeDiff < 1000 && Math.abs(order.total - remoteOrder.total) < 0.01;
+            });
+          }
+
+          if (existingOrders.length > 0) {
+            // Order exists locally - mark as synced if not already
+            const localOrder = existingOrders[0];
+            if (!localOrder.isSynced) {
+              await localOrder.update(order => {
+                order.isSynced = true;
+                order.syncedAt = Date.now();
+              });
+              markedAsSynced++;
+              console.log(`Marked order (timestamp: ${remoteOrder.timestamp}, total: ${remoteOrder.total}) as synced`);
+            }
+          }
+        }
+      });
+
+      console.log(`Pull completed: ${markedAsSynced} orders marked as synced, ${created} new orders created`);
+      
+      // Save sync status after pull
+      const pullResult = { success: true, pulled: remoteOrders.length, markedAsSynced, created };
+      await AsyncStorage.setItem('orderSyncStatus', JSON.stringify({
+        ...pullResult,
+        lastSyncTimestamp: Date.now()
+      }));
+      
+      return pullResult;
+    } catch (error) {
+      console.error('Error pulling orders from server:', error);
+      return { success: false, error: error.message, pulled: 0, markedAsSynced: 0, created: 0 };
     }
   },
 

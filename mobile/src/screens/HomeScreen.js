@@ -45,8 +45,12 @@ const HomeScreen = () => {
       // Calculate next order counter based on existing orders
       if (dbOrders.length > 0) {
         const lastOrderNumber = dbOrders[dbOrders.length - 1].orderNumber;
-        const lastCounter = parseInt(lastOrderNumber.split('-')[1]);
-        setOrderCounter(lastCounter + 1);
+        if (lastOrderNumber && typeof lastOrderNumber === 'string' && lastOrderNumber.includes('-')) {
+          const lastCounter = parseInt(lastOrderNumber.split('-')[1]);
+          if (!isNaN(lastCounter)) {
+            setOrderCounter(lastCounter + 1);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading orders:', error);

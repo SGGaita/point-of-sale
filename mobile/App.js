@@ -6,7 +6,7 @@ import {StyleSheet} from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import {DatabaseProvider} from './src/database/DatabaseProvider';
 import SplashScreen from './src/components/SplashScreen';
-import {syncService} from './src/services/syncService';
+import {autoSyncService} from './src/services/autoSyncService';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -23,21 +23,16 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    // Start auto-sync after app is loaded
+    // Start unified auto-sync after app is loaded
     if (!isLoading) {
-      console.log('Starting auto-sync service...');
+      console.log('Starting unified auto-sync service for all entities...');
       
-      // Initial sync on app start
-      syncService.syncOrdersToBackend().catch(err => {
-        console.log('Initial sync failed:', err.message);
-      });
-
-      // Start auto-sync every 5 minutes
-      const stopAutoSync = syncService.startAutoSync(5);
+      // Start auto-sync every 3 minutes for all entities (orders, menu, expenses)
+      const stopAutoSync = autoSyncService.startAutoSync(3);
 
       // Cleanup on unmount
       return () => {
-        console.log('Stopping auto-sync service...');
+        console.log('Stopping unified auto-sync service...');
         stopAutoSync();
       };
     }

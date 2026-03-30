@@ -1,6 +1,7 @@
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
-import { APP_API_URL } from '@env';
+
+const API_BASE_URL = process.env.APP_API_URL || 'https://pos-web-delta-opal.vercel.app';
 
 export const expenseSyncService = {
   async syncExpensesToBackend() {
@@ -26,7 +27,7 @@ export const expenseSyncService = {
         createdAt: expense.createdAt,
       }));
 
-      const apiUrl = `${APP_API_URL}/api/expenses/sync`;
+      const apiUrl = `${API_BASE_URL}/api/expenses/sync`;
       console.log('Syncing expenses to:', apiUrl);
       console.log('Expenses to sync:', expensesToSync.length);
 
@@ -95,7 +96,7 @@ export const expenseSyncService = {
         createdAt: template.createdAt,
       }));
 
-      const apiUrl = `${APP_API_URL}/api/expense-templates/sync`;
+      const apiUrl = `${API_BASE_URL}/api/expense-templates/sync`;
       console.log('Syncing templates to:', apiUrl);
 
       const response = await fetch(apiUrl, {

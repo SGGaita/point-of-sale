@@ -1,7 +1,8 @@
-import React, {useState} from 'react';
-import {View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows} from '../theme/theme';
+import {authService} from '../services/authService';
 
 const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
   const getCurrentDate = () => {
@@ -16,8 +17,59 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
   const [endDate, setEndDate] = useState(getCurrentDate());
   const [tempStartDate, setTempStartDate] = useState(getCurrentDate());
   const [tempEndDate, setTempEndDate] = useState(getCurrentDate());
+  const [expandedWaiter, setExpandedWaiter] = useState(null);
+  
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
+
+  const checkAuthentication = async () => {
+    const authenticated = await authService.isAuthenticated();
+    setIsAuthenticated(authenticated);
+    if (authenticated) {
+      const user = await authService.getCurrentUser();
+      setCurrentUser(user);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleLogin = async () => {
+    setLoginError('');
+    setIsLoggingIn(true);
+
+    const result = await authService.login(email, password);
+
+    setIsLoggingIn(false);
+
+    if (result.success) {
+      setIsAuthenticated(true);
+      setCurrentUser(result.user);
+      setShowLoginModal(false);
+      setEmail('');
+      setPassword('');
+    } else {
+      setLoginError(result.error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setShowLoginModal(true);
+  };
 
   const handlePreviousMonth = () => {
     if (selectedMonth === 0) {
@@ -185,6 +237,23 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
   };
 
+  const getWaiterOrders = (waiterName) => {
+    const filteredOrders = getFilteredOrders();
+    const waiterOrders = filteredOrders.filter(order => order.waiter === waiterName);
+    
+    const paidOrdersList = waiterOrders.filter(order => order.status === 'paid');
+    const unpaidOrdersList = waiterOrders.filter(order => order.status === 'unpaid' || order.status === 'pending');
+    
+    // Sort orders by order number (ascending)
+    paidOrdersList.sort((a, b) => a.orderNumber.localeCompare(b.orderNumber));
+    unpaidOrdersList.sort((a, b) => a.orderNumber.localeCompare(b.orderNumber));
+    
+    return {
+      paidOrdersList,
+      unpaidOrdersList,
+    };
+  };
+
   const getUnpaidOrders = () => {
     const filteredOrders = getFilteredOrders();
     return filteredOrders.filter(order => order.status === 'unpaid' || order.status === 'pending');
@@ -236,8 +305,114 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
   const firstDay = getFirstDayOfMonth(selectedMonth, selectedYear);
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Show login modal or message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        {!showLoginModal ? (
+          <View style={styles.lockedContainer}>
+            <Icon name="lock" size={64} color={colors.textSecondary} />
+            <Text style={styles.lockedTitle}>Summary View Locked</Text>
+            <Text style={styles.lockedMessage}>
+              This view requires admin authentication to access sales and financial data.
+            </Text>
+            <TouchableOpacity
+              style={styles.loginPromptButton}
+              onPress={() => setShowLoginModal(true)}
+            >
+              <Icon name="login" size={20} color={colors.white} />
+              <Text style={styles.loginPromptButtonText}>Login to Access</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        
+        <Modal
+          visible={showLoginModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowLoginModal(false)}
+        >
+          <View style={styles.loginOverlay}>
+            <View style={styles.loginContent}>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowLoginModal(false)}
+              >
+                <Icon name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <View style={styles.loginHeader}>
+                <Icon name="lock" size={48} color={colors.primary} />
+                <Text style={styles.loginTitle}>Admin Login Required</Text>
+                <Text style={styles.loginSubtitle}>Please login to access the Summary</Text>
+              </View>
+
+              <View style={styles.loginBody}>
+                <Text style={styles.loginLabel}>Email</Text>
+                <TextInput
+                  style={styles.loginInput}
+                  placeholder="Enter your email"
+                  placeholderTextColor={colors.placeholder}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!isLoggingIn}
+                />
+
+                <Text style={[styles.loginLabel, {marginTop: 16}]}>Password</Text>
+                <TextInput
+                  style={styles.loginInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.placeholder}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={true}
+                  editable={!isLoggingIn}
+                />
+
+                {loginError ? (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error" size={20} color={colors.danger} />
+                    <Text style={styles.errorText}>{loginError}</Text>
+                  </View>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[styles.loginButton, isLoggingIn && styles.loginButtonDisabled]}
+                  onPress={handleLogin}
+                  disabled={isLoggingIn || !email || !password}
+                >
+                  {isLoggingIn ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <>
+                      <Icon name="login" size={20} color={colors.white} />
+                      <Text style={styles.loginButtonText}>Login</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      {/* Logout Button */}
+      <View style={styles.headerBar}>
+        <View style={styles.userInfo}>
+          <Icon name="account-circle" size={24} color={colors.primary} />
+          <Text style={styles.userName}>{currentUser?.name || 'Admin'}</Text>
+        </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Icon name="logout" size={20} color={colors.danger} />
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Calendar */}
         <View style={styles.calendarCard}>
@@ -354,36 +529,130 @@ const SummaryView = ({orders = [], expenses = [], onMarkPaid}) => {
           {topSalesPerWaiter.length === 0 ? (
             <Text style={styles.emptyText}>No sales data available</Text>
           ) : (
-            topSalesPerWaiter.map((waiter, index) => (
-              <View key={index} style={styles.waiterSalesCard}>
-                <View style={styles.waiterCardHeader}>
-                  <Text style={styles.waiterCardName}>{waiter.name}</Text>
-                  <View style={styles.waiterRevenueRow}>
-                    <View style={styles.waiterRevenueColumn}>
-                      <Text style={styles.waiterRevenueLabel}>Total</Text>
-                      <Text style={[styles.waiterRevenueValue, {color: colors.danger}]}>
-                        {waiter.totalRevenue} Ksh
-                      </Text>
-                    </View>
-                    <View style={styles.waiterRevenueColumn}>
-                      <Text style={styles.waiterRevenueLabel}>Paid</Text>
-                      <Text style={[styles.waiterRevenueValue, {color: colors.success}]}>
-                        {waiter.paidRevenue} Ksh
-                      </Text>
-                    </View>
-                    <View style={styles.waiterRevenueColumn}>
-                      <Text style={styles.waiterRevenueLabel}>Unpaid</Text>
-                      <Text style={[styles.waiterRevenueValue, {color: colors.danger}]}>
-                        {waiter.unpaidRevenue} Ksh
-                      </Text>
+            topSalesPerWaiter.map((waiter, index) => {
+              const isExpanded = expandedWaiter === waiter.name;
+              const waiterOrders = isExpanded ? getWaiterOrders(waiter.name) : null;
+              
+              return (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.waiterSalesCard}
+                  onPress={() => setExpandedWaiter(isExpanded ? null : waiter.name)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.waiterCardHeader}>
+                    <Text style={styles.waiterCardName}>{waiter.name}</Text>
+                    <View style={styles.waiterRevenueRow}>
+                      <View style={styles.waiterRevenueColumn}>
+                        <Text style={styles.waiterRevenueLabel}>Total</Text>
+                        <Text style={[styles.waiterRevenueValue, {color: colors.danger}]}>
+                          {waiter.totalRevenue} Ksh
+                        </Text>
+                      </View>
+                      <View style={styles.waiterRevenueColumn}>
+                        <Text style={styles.waiterRevenueLabel}>Paid</Text>
+                        <Text style={[styles.waiterRevenueValue, {color: colors.success}]}>
+                          {waiter.paidRevenue} Ksh
+                        </Text>
+                      </View>
+                      <View style={styles.waiterRevenueColumn}>
+                        <Text style={styles.waiterRevenueLabel}>Unpaid</Text>
+                        <Text style={[styles.waiterRevenueValue, {color: colors.danger}]}>
+                          {waiter.unpaidRevenue} Ksh
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-                <Text style={styles.waiterOrdersSummary}>
-                  Orders: {waiter.totalOrders} (Paid: {waiter.paidOrders} • Unpaid: {waiter.unpaidOrders})
-                </Text>
-              </View>
-            ))
+                  <Text style={styles.waiterOrdersSummary}>
+                    Orders: {waiter.totalOrders} (Paid: {waiter.paidOrders} • Unpaid: {waiter.unpaidOrders})
+                  </Text>
+                  
+                  {isExpanded && waiterOrders && (
+                    <View style={styles.waiterOrdersExpanded}>
+                      {/* Paid Orders */}
+                      {waiterOrders.paidOrdersList.length > 0 && (
+                        <View style={styles.ordersSection}>
+                          <Text style={[styles.ordersSectionTitle, {color: colors.success}]}>
+                            Paid Orders ({waiterOrders.paidOrdersList.length})
+                          </Text>
+                          {waiterOrders.paidOrdersList.map((order) => (
+                            <View key={order.id} style={styles.orderDetailCard}>
+                              <View style={styles.orderDetailHeader}>
+                                <Text style={styles.orderDetailNumber}>{order.orderNumber}</Text>
+                                <Text style={styles.orderDetailAmount}>{order.total} Ksh</Text>
+                              </View>
+                              {order.customerName && (
+                                <Text style={styles.orderDetailCustomer}>Customer: {order.customerName}</Text>
+                              )}
+                              <Text style={styles.orderDetailTime}>
+                                {formatDate(order.timestamp)} {formatTime(order.timestamp)}
+                              </Text>
+                              {order.items && order.items.length > 0 && (
+                                <View style={styles.orderDetailItems}>
+                                  {order.items.map((item, idx) => (
+                                    <View key={idx} style={styles.orderDetailItem}>
+                                      <Text style={styles.orderDetailItemName}>
+                                        {item.name} x{item.quantity}
+                                      </Text>
+                                      <Text style={styles.orderDetailItemPrice}>{item.totalPrice} Ksh</Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                      
+                      {/* Unpaid Orders */}
+                      {waiterOrders.unpaidOrdersList.length > 0 && (
+                        <View style={styles.ordersSection}>
+                          <Text style={[styles.ordersSectionTitle, {color: colors.danger}]}>
+                            Unpaid Orders ({waiterOrders.unpaidOrdersList.length})
+                          </Text>
+                          {waiterOrders.unpaidOrdersList.map((order) => (
+                            <View key={order.id} style={styles.orderDetailCard}>
+                              <View style={styles.orderDetailHeader}>
+                                <Text style={styles.orderDetailNumber}>{order.orderNumber}</Text>
+                                <Text style={styles.orderDetailAmount}>{order.total} Ksh</Text>
+                              </View>
+                              {order.customerName && (
+                                <Text style={styles.orderDetailCustomer}>Customer: {order.customerName}</Text>
+                              )}
+                              <Text style={styles.orderDetailTime}>
+                                {formatDate(order.timestamp)} {formatTime(order.timestamp)}
+                              </Text>
+                              {order.items && order.items.length > 0 && (
+                                <View style={styles.orderDetailItems}>
+                                  {order.items.map((item, idx) => (
+                                    <View key={idx} style={styles.orderDetailItem}>
+                                      <Text style={styles.orderDetailItemName}>
+                                        {item.name} x{item.quantity}
+                                      </Text>
+                                      <Text style={styles.orderDetailItemPrice}>{item.totalPrice} Ksh</Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              )}
+                              <TouchableOpacity
+                                style={styles.markPaidButtonInline}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  onMarkPaid && onMarkPaid(order.id);
+                                }}
+                              >
+                                <Icon name="check-circle" size={16} color={colors.white} />
+                                <Text style={styles.markPaidButtonText}>Mark as Paid</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
 
@@ -787,11 +1056,262 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.white,
   },
+  loginOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    width: '85%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  loginHeader: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  loginTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  loginSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  loginBody: {
+    padding: 24,
+  },
+  loginLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  loginInput: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.danger + '15',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.danger,
+  },
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 14,
+    marginTop: 24,
+    gap: 8,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+  },
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: colors.background,
+  },
+  lockedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    marginTop: 24,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  lockedMessage: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  loginPromptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  loginPromptButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.danger + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 6,
+  },
+  logoutButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.danger,
+  },
   emptyText: {
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  waiterOrdersExpanded: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  ordersSection: {
+    marginBottom: 16,
+  },
+  ordersSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  orderDetailCard: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  orderDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  orderDetailNumber: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  orderDetailAmount: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  orderDetailCustomer: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  orderDetailTime: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  orderDetailItems: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 8,
+  },
+  orderDetailItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  orderDetailItemName: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  orderDetailItemPrice: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginLeft: 12,
+  },
+  markPaidButtonInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 8,
+    gap: 6,
   },
 });
 

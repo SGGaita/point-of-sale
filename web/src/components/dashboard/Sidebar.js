@@ -32,6 +32,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import { useTheme as useAppTheme } from "@/contexts/ThemeContext";
 
 const drawerWidth = 260;
@@ -41,6 +42,7 @@ const navItems = [
   { icon: <RestaurantMenuIcon />, label: "Menu", path: "/dashboard/menu" },
   { icon: <InventoryIcon />, label: "Inventory", path: "/dashboard/inventory" },
   { icon: <ShoppingCartIcon />, label: "Orders", path: "/dashboard/orders" },
+  { icon: <ReceiptIcon />, label: "Expenses", path: "/dashboard/expenses" },
   { icon: <BadgeIcon />, label: "Staff", path: "/dashboard/staff" },
   { icon: <PersonIcon />, label: "Waiters", path: "/dashboard/waiters" },
   { icon: <AssessmentIcon />, label: "Reports", path: "/dashboard/reports" },

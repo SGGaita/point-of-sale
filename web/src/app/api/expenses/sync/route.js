@@ -1,17 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-let supabaseInstance = null;
-
-function getSupabase() {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseInstance;
-}
+import supabase from '@/lib/supabase';
 
 export async function POST(request) {
   try {
@@ -43,7 +31,7 @@ export async function POST(request) {
         };
 
         // Check if expense already exists by checking similar timestamp and amount
-        const { data: existingExpense } = await getSupabase()
+        const { data: existingExpense } = await supabase
           .from('expenses')
           .select('id')
           .eq('timestamp', expenseData.timestamp)
@@ -53,7 +41,7 @@ export async function POST(request) {
 
         if (existingExpense) {
           // Update existing expense
-          const { error: updateError } = await getSupabase()
+          const { error: updateError } = await supabase
             .from('expenses')
             .update(expenseData)
             .eq('id', existingExpense.id);
@@ -62,7 +50,7 @@ export async function POST(request) {
           results.push({ id: expense.id, status: 'updated' });
         } else {
           // Insert new expense
-          const { error: insertError } = await getSupabase()
+          const { error: insertError } = await supabase
             .from('expenses')
             .insert([expenseData]);
 
@@ -100,7 +88,7 @@ export async function GET(request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    let query = getSupabase()
+    let query = supabase
       .from('expenses')
       .select('*')
       .order('timestamp', { ascending: false });
