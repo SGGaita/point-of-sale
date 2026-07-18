@@ -24,6 +24,7 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    seed: "node prisma/seed.js",
   },
   datasource: {
     // Prefer DIRECT_URL (session mode) for db push / migrate; pooler URL often fails for schema ops.
