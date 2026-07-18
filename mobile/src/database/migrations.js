@@ -119,5 +119,17 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 7,
+      steps: [
+        // Link local waiters to web Staff records (single roster)
+        addColumns({
+          table: 'waiters',
+          columns: [
+            { name: 'server_id', type: 'string', isOptional: true, isIndexed: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

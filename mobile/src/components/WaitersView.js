@@ -1,13 +1,11 @@
 import React, {useState} from 'react';
-import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal} from 'react-native';
+import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {colors, typography, spacing, borderRadius, shadows} from '../theme/theme';
 
-const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrintReceipt, onUpdateCustomerName}) => {
+const WaitersView = ({waiters = [], orders = [], onMarkPaid, onPrintReceipt, onUpdateCustomerName}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
-  const [addWaiterModal, setAddWaiterModal] = useState(false);
-  const [newWaiterName, setNewWaiterName] = useState('');
   const [expandedWaiter, setExpandedWaiter] = useState(null);
   const [customerNames, setCustomerNames] = useState({});
   const [expandedPaidOrders, setExpandedPaidOrders] = useState({});
@@ -98,14 +96,6 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
     return filtered;
   };
 
-  const handleAddWaiter = () => {
-    if (newWaiterName.trim() !== '') {
-      onAddWaiter && onAddWaiter(newWaiterName.trim());
-      setNewWaiterName('');
-      setAddWaiterModal(false);
-    }
-  };
-
   const filteredWaiters = getFilteredWaiters();
 
   return (
@@ -153,21 +143,14 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
           </ScrollView>
         </View>
 
-        {/* Add New Waiter Button */}
-        <TouchableOpacity 
-          style={styles.addWaiterButton}
-          onPress={() => setAddWaiterModal(true)}
-        >
-          <Icon name="person-add" size={20} color={colors.white} />
-          <Text style={styles.addWaiterButtonText}>Add New Waiter/Waitress</Text>
-        </TouchableOpacity>
-
         {/* Waiters List */}
         {waiters.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Icon name="people-outline" size={64} color={colors.border} />
             <Text style={styles.emptyTitle}>No Waiters Yet</Text>
-            <Text style={styles.emptySubtitle}>Add waiters to start managing orders</Text>
+            <Text style={styles.emptySubtitle}>
+              Add waiters on web Staff with position Waiter, then sync
+            </Text>
           </View>
         ) : filteredWaiters.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -355,60 +338,6 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
           })
         )}
       </ScrollView>
-
-      {/* Add Waiter Modal */}
-      <Modal
-        visible={addWaiterModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setAddWaiterModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Waiter/Waitress</Text>
-              <TouchableOpacity onPress={() => setAddWaiterModal(false)}>
-                <Icon name="close" size={24} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Name</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter waiter/waitress name"
-                placeholderTextColor={colors.placeholder}
-                value={newWaiterName}
-                onChangeText={setNewWaiterName}
-                autoFocus={true}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setNewWaiterName('');
-                  setAddWaiterModal(false);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  styles.addButton,
-                  !newWaiterName.trim() && styles.addButtonDisabled
-                ]}
-                onPress={handleAddWaiter}
-                disabled={!newWaiterName.trim()}
-              >
-                <Text style={styles.addButtonText}>Add Waiter</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
