@@ -16,11 +16,13 @@ export const waiterService = {
   },
 
   /**
-   * Create a waiter via the web Staff API (source of truth), then pull.
-   * Offline local-only creates are not allowed so rosters stay aligned.
+   * Waiters are managed only on web Staff (position = Waiter).
+   * Mobile may pull/sync the roster, but must not create waiters.
    */
-  async createWaiter(name) {
-    return waiterSyncService.createWaiterOnServer(name);
+  async createWaiter() {
+    throw new Error(
+      'Waiters can only be added from the web Staff page (position: Waiter).',
+    );
   },
 
   // Soft-delete locally (web soft-delete + next pull is preferred for permanent removal)

@@ -137,40 +137,6 @@ export const waiterSyncService = {
     }
   },
 
-  /**
-   * Create a waiter on the web Staff roster, then refresh local DB.
-   */
-  async createWaiterOnServer(name) {
-    const trimmed = (name || '').trim();
-    if (!trimmed) {
-      throw new Error('Waiter name is required');
-    }
-
-    const isConnected = await networkUtils.isConnected();
-    if (!isConnected) {
-      throw new Error(
-        'No internet connection. Add waiters from the web Staff page, or reconnect to sync.',
-      );
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/staff`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        name: trimmed,
-        positionName: 'Waiter',
-      }),
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to create waiter on server');
-    }
-
-    await this.pullWaitersFromServer();
-    return trimmed;
-  },
-
   async getLastSyncStatus() {
     try {
       const status = await AsyncStorage.getItem(WAITER_SYNC_STATUS_KEY);

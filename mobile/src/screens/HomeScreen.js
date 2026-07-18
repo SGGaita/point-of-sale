@@ -357,29 +357,6 @@ const HomeScreen = () => {
     }
   };
 
-  const handleAddWaiter = async (waiterName) => {
-    try {
-      // Save to database
-      await waiterService.createWaiter(waiterName);
-      
-      // Reload waiters from database
-      await loadWaiters();
-      
-      setSnackbar({
-        visible: true,
-        message: `${waiterName} added successfully`,
-        type: 'success',
-      });
-    } catch (error) {
-      console.error('Error adding waiter:', error);
-      setSnackbar({
-        visible: true,
-        message: error.message || 'Failed to add waiter',
-        type: 'error',
-      });
-    }
-  };
-
   const handleUpdateCustomerName = async (orderId, customerName) => {
     try {
       // Update in database
@@ -515,7 +492,7 @@ const HomeScreen = () => {
       case 'orders':
         return <OrdersView orders={orders} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} />;
       case 'waiters':
-        return <WaitersView waiters={waiters} orders={orders} onAddWaiter={handleAddWaiter} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} onUpdateCustomerName={handleUpdateCustomerName} />;
+        return <WaitersView waiters={waiters} orders={orders} onMarkPaid={handleMarkPaid} onPrintReceipt={handlePrintReceipt} onUpdateCustomerName={handleUpdateCustomerName} />;
       case 'expenses':
         return <ExpensesViewNew expenses={expenses} onAddExpense={handleAddExpense} onUpdateExpense={handleUpdateExpense} onDeleteExpense={handleDeleteExpense} onShowSnackbar={showSnackbar} />;
       case 'summary':
