@@ -1,5 +1,6 @@
 const path = require("node:path");
 const { config } = require("dotenv");
+const bcrypt = require("bcryptjs");
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 
@@ -17,6 +18,28 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("Starting database seed...");
+
+  const adminEmail = "admin@restaurant.com";
+  const adminPassword = "admin123";
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      password: passwordHash,
+      role: "ADMIN",
+      isActive: true,
+    },
+    create: {
+      name: "System Administrator",
+      email: adminEmail,
+      password: passwordHash,
+      role: "ADMIN",
+      isActive: true,
+    },
+  });
+
+  console.log(`Upserted admin user: ${admin.email} (password: ${adminPassword})`);
 
   // Create sample products (skip if SKU already exists)
   const productData = [
