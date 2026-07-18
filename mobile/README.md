@@ -1,128 +1,77 @@
-# POS Mobile Application
+# POS Mobile
 
-A React Native mobile application for Point of Sale with offline-first capabilities using WatermelonDB and Supabase sync.
-
-## Features
-
-- 📱 Cross-platform (iOS & Android)
-- 🔄 Offline-first architecture with WatermelonDB
-- ☁️ Cloud sync with Supabase
-- 🎨 Modern UI with React Navigation
-- 🚀 Built with React Native CLI (no Expo)
+React Native Point of Sale app with offline-first WatermelonDB storage and backend sync.
 
 ## Prerequisites
 
 - Node.js >= 18
-- JDK 17 (for Android)
-- Android Studio with Android SDK (for Android)
-- Xcode 14+ (for iOS, macOS only)
-- CocoaPods (for iOS, macOS only)
+- JDK 17 (Android)
+- Android Studio + Android SDK (Android)
+- Xcode 14+ and CocoaPods (iOS, macOS only)
 
-## Setup
+## Local setup
 
-### 1. Install Dependencies
+```bash
+cd mobile
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```bash
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+# Local web API — use LAN IP for a physical device
+APP_API_URL=http://192.168.x.x:3000
+```
 
 ```bash
 npm install
-```
-
-### 2. Configure Environment Variables
-
-Create a `.env` file in the root directory:
-
-```bash
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### 3. Android Setup
-
-The Android project needs to be initialized using React Native CLI:
-
-```bash
-npx react-native init POSMobile --version 0.73.2
-```
-
-Then copy the android folder to this project, or run:
-
-```bash
-npx react-native@latest init-android
-```
-
-### 4. iOS Setup (macOS only)
-
-The iOS project needs to be initialized:
-
-```bash
-npx react-native@latest init-ios
-```
-
-Then install pods:
-
-```bash
-cd ios
-pod install
-cd ..
-```
-
-### 5. Run the App
-
-**Android:**
-```bash
-npm run android
-```
-
-**iOS (macOS only):**
-```bash
-npm run ios
-```
-
-**Start Metro Bundler separately:**
-```bash
 npm start
 ```
 
-## Project Structure
+In another terminal:
+
+```bash
+npm run android
+# or (macOS)
+cd ios && pod install && cd ..
+npm run ios
+```
+
+Native `android/` and `ios/` projects are already in this repo. See [SETUP_GUIDE.md](./SETUP_GUIDE.md) if you hit platform-specific issues.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Metro bundler |
+| `npm run android` | Run on Android |
+| `npm run ios` | Run on iOS |
+| `npm test` | Jest |
+| `npm run lint` | ESLint |
+
+## Project structure
 
 ```
 mobile/
 ├── src/
-│   ├── screens/        # Screen components
-│   ├── navigation/     # Navigation configuration
-│   ├── database/       # WatermelonDB models and schema
-│   ├── services/       # API and sync services
-│   ├── components/     # Reusable components
-│   ├── hooks/          # Custom React hooks
-│   └── utils/          # Utility functions
-├── android/           # Android native code
-├── ios/              # iOS native code
-└── App.tsx           # Entry point
+│   ├── screens/
+│   ├── navigation/
+│   ├── database/      # WatermelonDB schema, models, migrations
+│   ├── services/      # Sync and API services
+│   ├── components/
+│   ├── hooks/
+│   └── utils/
+├── android/
+├── ios/
+└── App.js
 ```
 
-## Technologies
+## Sync with local web
 
-- React Native CLI 0.73.2
-- React Navigation (Bottom Tabs + Stack)
-- WatermelonDB (Offline storage)
-- Supabase (Backend & sync)
-- React Native Config (Environment variables)
-- React Native Vector Icons
+1. Run the web app (`cd ../web && npm run dev`).
+2. Point `APP_API_URL` at that server.
+3. Restart Metro after changing `.env` (`npm start -- --reset-cache` if needed).
 
-## Next Steps
-
-1. Install dependencies: `npm install`
-2. Initialize Android/iOS projects (see setup above)
-3. Configure your Supabase credentials in `.env`
-4. Set up WatermelonDB schema and models
-5. Implement sync logic with Supabase
-6. Add product and sales management features
-
-## Development
-
-The app is structured with:
-- **Home Screen**: Dashboard with sales overview
-- **Sales Screen**: Transaction management
-- **Products Screen**: Product catalog
-- **Settings Screen**: App configuration
-
-All screens are ready with basic UI. Next steps involve connecting to WatermelonDB for local storage and Supabase for cloud sync.
+More: [SYNC_SETUP.md](./SYNC_SETUP.md), [QUICK_SYNC_INTEGRATION.md](./QUICK_SYNC_INTEGRATION.md).

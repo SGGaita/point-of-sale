@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# POS Web
 
-## Getting Started
+Next.js admin dashboard and API for the Point of Sale system (Prisma + PostgreSQL/Supabase).
 
-First, run the development server:
+## Local setup
+
+From the repo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd web
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env` with your Supabase project URL, anon key, and Postgres connection strings. See [DATABASE_SETUP.md](./DATABASE_SETUP.md).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run prisma:generate
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+App: [http://localhost:3000](http://localhost:3000)
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` / `npm start` | Production build and serve |
+| `npm run lint` | ESLint |
+| `npm run prisma:generate` | Generate Prisma Client |
+| `npm run prisma:push` | Push schema to DB |
+| `npm run prisma:migrate` | Create/apply migrations |
+| `npm run prisma:studio` | Prisma Studio GUI |
+| `npm run prisma:seed` | Seed database |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project layout
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+web/
+├── src/           # App router pages, components, lib
+├── prisma/        # schema.prisma, seed
+├── public/        # Static assets
+└── *.sql          # Manual SQL helpers / migrations
+```
 
-## Deploy on Vercel
+## Connecting the mobile app
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+When testing sync from the mobile app against this local server, set `APP_API_URL` in `mobile/.env` to your machine’s LAN IP on port 3000 (for example `http://192.168.1.10:3000`).
