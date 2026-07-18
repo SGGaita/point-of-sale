@@ -11,6 +11,7 @@ import Snackbar from '../components/Snackbar';
 import ReceiptModal from '../components/ReceiptModal';
 import {orderService} from '../services/orderService';
 import {waiterService} from '../services/waiterService';
+import {waiterSyncService} from '../services/waiterSyncService';
 import {expenseService} from '../services/expenseService';
 
 const HomeScreen = () => {
@@ -85,6 +86,11 @@ const HomeScreen = () => {
 
   const handleWaitersPress = () => {
     setActiveView('waiters');
+    // Refresh roster from web Staff when opening Waiters
+    waiterSyncService
+      .pullWaitersFromServer()
+      .then(() => loadWaiters())
+      .catch(() => loadWaiters());
   };
 
   const handleExpensesPress = () => {

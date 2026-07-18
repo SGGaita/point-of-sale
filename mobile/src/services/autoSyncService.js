@@ -1,6 +1,7 @@
 import { syncService } from './syncService';
 import { menuSyncService } from './menuSyncService';
 import { expenseSyncService } from './expenseSyncService';
+import { waiterSyncService } from './waiterSyncService';
 import { networkUtils } from '../utils/networkUtils';
 
 export const autoSyncService = {
@@ -35,10 +36,11 @@ export const autoSyncService = {
         syncService.syncOrdersToBackend(),
         syncService.pullOrdersFromServer(),
         menuSyncService.syncMenuItems(),
-        expenseSyncService.syncAll()
+        expenseSyncService.syncAll(),
+        waiterSyncService.pullWaitersFromServer(),
       ]);
 
-      const [ordersPushResult, ordersPullResult, menuResult, expensesResult] = results;
+      const [ordersPushResult, ordersPullResult, menuResult, expensesResult, waitersResult] = results;
 
       const summary = {
         success: true,
@@ -47,13 +49,15 @@ export const autoSyncService = {
           pull: ordersPullResult.status === 'fulfilled' ? ordersPullResult.value : { success: false, error: ordersPullResult.reason?.message }
         },
         menu: menuResult.status === 'fulfilled' ? menuResult.value : { success: false, error: menuResult.reason?.message },
-        expenses: expensesResult.status === 'fulfilled' ? expensesResult.value : { success: false, error: expensesResult.reason?.message }
+        expenses: expensesResult.status === 'fulfilled' ? expensesResult.value : { success: false, error: expensesResult.reason?.message },
+        waiters: waitersResult.status === 'fulfilled' ? waitersResult.value : { success: false, error: waitersResult.reason?.message }
       };
 
       console.log('Unified sync completed:', {
         orders: `${summary.orders.push.synced || 0} pushed, ${summary.orders.pull.updated || 0} pulled`,
         menu: summary.menu.success ? `${summary.menu.pushed || 0} pushed, ${summary.menu.pulled || 0} pulled` : 'failed',
-        expenses: summary.expenses.expenses?.success ? 'synced' : 'failed'
+        expenses: summary.expenses.expenses?.success ? 'synced' : 'failed',
+        waiters: summary.waiters.success ? `${summary.waiters.pulled || 0} pulled` : 'failed'
       });
 
       return summary;

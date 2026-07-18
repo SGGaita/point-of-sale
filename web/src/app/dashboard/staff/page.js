@@ -447,7 +447,8 @@ export default function StaffManagementPage() {
               Staff & User Management
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Manage employees, user accounts, and positions
+              Manage employees, user accounts, and positions. Staff with position
+              &quot;Waiter&quot; sync to the mobile POS roster.
             </Typography>
           </Box>
 
@@ -462,8 +463,13 @@ export default function StaffManagementPage() {
           {/* Staff Tab */}
           {activeTab === 0 && (
             <Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-                <Typography variant="h6">Staff Members (No Login Access)</Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+                <Box>
+                  <Typography variant="h6">Staff Members (No Login Access)</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Use position &quot;Waiter&quot; for names that appear on the mobile order screen.
+                  </Typography>
+                </Box>
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}

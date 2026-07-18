@@ -167,7 +167,9 @@ const WaitersView = ({waiters = [], orders = [], onAddWaiter, onMarkPaid, onPrin
           <View style={styles.emptyContainer}>
             <Icon name="people-outline" size={64} color={colors.border} />
             <Text style={styles.emptyTitle}>No Waiters Yet</Text>
-            <Text style={styles.emptySubtitle}>Add waiters to start managing orders</Text>
+            <Text style={styles.emptySubtitle}>
+              Add waiters here (online) or from web Staff with position Waiter, then sync
+            </Text>
           </View>
         ) : filteredWaiters.length === 0 ? (
           <View style={styles.emptyContainer}>

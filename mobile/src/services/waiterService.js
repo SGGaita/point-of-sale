@@ -1,48 +1,35 @@
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
+import { waiterSyncService } from './waiterSyncService';
 
 export const waiterService = {
-  // Get all waiters
+  // Get all active waiters (local cache of web Staff roster)
   async getAllWaiters() {
     const waitersCollection = database.collections.get('waiters');
     const waiters = await waitersCollection
       .query(Q.where('is_active', true))
       .fetch();
-    
-    return waiters.map(waiter => waiter.name);
+
+    return waiters
+      .map(waiter => waiter.name)
+      .sort((a, b) => a.localeCompare(b));
   },
 
-  // Create a new waiter
+  /**
+   * Create a waiter via the web Staff API (source of truth), then pull.
+   * Offline local-only creates are not allowed so rosters stay aligned.
+   */
   async createWaiter(name) {
-    const waitersCollection = database.collections.get('waiters');
-    
-    // Check if waiter already exists
-    const existingWaiter = await waitersCollection
-      .query(Q.where('name', name))
-      .fetch();
-    
-    if (existingWaiter.length > 0) {
-      throw new Error('Waiter already exists');
-    }
-    
-    let createdWaiter;
-    await database.write(async () => {
-      createdWaiter = await waitersCollection.create(waiter => {
-        waiter.name = name;
-        waiter.isActive = true;
-      });
-    });
-    
-    return createdWaiter.name;
+    return waiterSyncService.createWaiterOnServer(name);
   },
 
-  // Delete a waiter (soft delete by marking as inactive)
+  // Soft-delete locally (web soft-delete + next pull is preferred for permanent removal)
   async deleteWaiter(waiterName) {
     const waitersCollection = database.collections.get('waiters');
     const waiter = await waitersCollection
       .query(Q.where('name', waiterName))
       .fetch();
-    
+
     if (waiter.length > 0) {
       await database.write(async () => {
         await waiter[0].update(w => {
@@ -52,24 +39,20 @@ export const waiterService = {
     }
   },
 
-  // Seed initial waiters
+  /**
+   * Initialize roster from web when online.
+   * No hardcoded seed — empty until first successful pull or web Staff add.
+   */
   async seedWaiters() {
-    const waitersCollection = database.collections.get('waiters');
-    const existingWaiters = await waitersCollection.query().fetch();
-    
-    if (existingWaiters.length > 0) {
-      return;
-    }
-    
-    const defaultWaiters = ['Noorah', 'Valary', 'Jasmine', 'Pauline'];
-    
-    await database.write(async () => {
-      for (const name of defaultWaiters) {
-        await waitersCollection.create(waiter => {
-          waiter.name = name;
-          waiter.isActive = true;
-        });
+    try {
+      const result = await waiterSyncService.pullWaitersFromServer();
+      if (result.success) {
+        console.log('Waiter roster synced from web Staff:', result.message);
+      } else {
+        console.log('Waiter roster pull skipped:', result.error);
       }
-    });
+    } catch (error) {
+      console.log('Waiter roster init skipped:', error.message);
+    }
   },
 };

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 6,
+  version: 7,
   tables: [
     tableSchema({
       name: 'menu_items',
@@ -48,6 +48,7 @@ export default appSchema({
       name: 'waiters',
       columns: [
         { name: 'name', type: 'string', isIndexed: true },
+        { name: 'server_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'is_active', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },

@@ -39,6 +39,24 @@ export async function POST(request) {
       );
     }
 
+    let resolvedPositionId = positionId || null;
+    let resolvedPositionName = positionName || null;
+
+    // Resolve position by name when id is missing (e.g. mobile waiter create)
+    if (!resolvedPositionId && resolvedPositionName) {
+      const { data: position } = await supabase
+        .from('positions')
+        .select('id, name')
+        .ilike('name', resolvedPositionName)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (position) {
+        resolvedPositionId = position.id;
+        resolvedPositionName = position.name;
+      }
+    }
+
     const { data: staff, error } = await supabase
       .from('staff')
       .insert({
@@ -46,8 +64,8 @@ export async function POST(request) {
         name,
         email: email || null,
         phone: phone || null,
-        position_id: positionId || null,
-        position_name: positionName || null,
+        position_id: resolvedPositionId,
+        position_name: resolvedPositionName,
         hire_date: hireDate || null,
         salary: salary || null,
         notes: notes || null,
