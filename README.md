@@ -12,9 +12,22 @@ point-of-sale/
 ## Clone locally
 
 ```bash
-git clone https://github.com/sggaita/point-of-sale.git
+git clone https://github.com/SGGaita/point-of-sale.git
 cd point-of-sale
 ```
+
+## Independent copy (recommended if the project is already live)
+
+To develop without affecting the live GitHub repo, database, or deploy, put the code in **your** repository and use a **new** Supabase project:
+
+```bash
+# On your machine, logged into GitHub as yourself:
+git clone https://github.com/SGGaita/point-of-sale.git
+cd point-of-sale
+./scripts/make-independent-repo.sh YOUR_GITHUB_USERNAME/my-pos --create
+```
+
+Then configure fresh `.env` files against your own Supabase project. Full steps and safety checklist: [docs/INDEPENDENT_PROJECT.md](docs/INDEPENDENT_PROJECT.md).
 
 ## Prerequisites
 
